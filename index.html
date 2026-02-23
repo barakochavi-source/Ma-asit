@@ -1365,6 +1365,38 @@ body{ padding-top:10px !important; }
 
 <body>
 
+<header class="topbar hidden" id="topbar">
+  <div class="topbar-left">
+    <div class="btn-row">
+       <button class="btn" id="filterToggleBtn">🔍 סינון</button>
+       <select class="view-select" id="monthFilterMaster"></select>
+       <select class="view-select" id="yearFilterMaster"></select>
+    </div>
+  </div>
+  <h1 class="topbar-title">ניהול מעשר כספים</h1>
+</header>
+
+<div class="filter-popover" id="filterPopover">
+  <div class="filter-grid">
+    <input class="input" type="text" id="searchTermMaster" placeholder="חיפוש חופשי..." style="width:140px;" />
+    <input class="input" type="number" id="searchAmountMaster" placeholder="סכום מדויק" style="width:100px;" />
+    
+    <div style="position:relative; display:flex; align-items:center;">
+       <input class="input" type="text" id="searchStartMaster" placeholder="מתאריך" style="width:90px; padding-left:25px;" readonly>
+       <button class="cal-btn-inner calendar-btn" data-target="searchStartMaster">📅</button>
+    </div>
+    
+    <div style="position:relative; display:flex; align-items:center;">
+       <input class="input" type="text" id="searchEndMaster" placeholder="עד תאריך" style="width:90px; padding-left:25px;" readonly>
+       <button class="cal-btn-inner calendar-btn" data-target="searchEndMaster">📅</button>
+    </div>
+    
+    <button id="clearSearchMaster">נקה סינון</button>
+  </div>
+</div>
+
+
+
   
   <div id="lock">
     <div class="login login-card">
