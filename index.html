@@ -1829,57 +1829,34 @@ async function cloudSave(state){
 }
 
 async function startAppAfterAuth(){
-  // UI פתיחה
-  $('lock')?.classList.add('hidden');
-  $('app')?.classList.remove('hidden');
-  $('sysbar')?.classList.remove('hidden');
-  $('topbar')?.classList.remove('hidden');
+  // קודם כל - נראה את האפליקציה כדי שלא יהיה "חלון מחוק"
+  document.getElementById('lock').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('sysbar').classList.remove('hidden');
+  document.getElementById('topbar').classList.remove('hidden');
 
   initMasterFilters();
   setupEnterKeys();
 
-  // טען ענן (אם קיים) ושפוך למבנים
-  try{
+  // עכשיו ננסה לטעון מהענן בזהירות
+  try {
     const cloud = await cloudLoad();
     if(cloud){
       data1 = Array.isArray(cloud.data1) ? cloud.data1 : data1;
       data2 = Array.isArray(cloud.data2) ? cloud.data2 : data2;
       data3 = Array.isArray(cloud.data3) ? cloud.data3 : data3;
-
       fixedSettings = cloud.fixedSettings || fixedSettings;
       confirmedLogs = Array.isArray(cloud.confirmedLogs) ? cloud.confirmedLogs : confirmedLogs;
       config = cloud.config || config;
-
       ensureSorted(data1); ensureSorted(data2); ensureSorted(data3);
     }
-  }catch(e){
-    console.error(e);
-    $('loginHint') && ($('loginHint').textContent = "אזהרה: לא הצלחתי לטעון נתונים מהענן.");
+  } catch(e) {
+    console.log("הענן עדיין לא מוכן, עובד על זיכרון מקומי");
   }
 
   updateUI();
-  checkAllScheduled();
-  checkBackupTimer();
 }
 
-async function registerEmailPass(){
-  fbInitOnce();
-  const email = ( $('emailInput')?.value || '' ).trim();
-  const pass  = ( $('passInput')?.value || '' ).trim();
-  if(!email || !pass){
-    $('loginHint') && ($('loginHint').textContent = "נא למלא דוא״ל וסיסמה.");
-    return;
-  }
-  $('loginHint') && ($('loginHint').textContent = "יוצר משתמש...");
-  try{
-    await firebase.auth().createUserWithEmailAndPassword(email, pass);
-    $('loginHint') && ($('loginHint').textContent = "נוצר משתמש ✅ נכנסת בהצלחה.");
-    await startAppAfterAuth();
-  }catch(e){
-    console.error(e);
-    $('loginHint') && ($('loginHint').textContent = "שגיאה ביצירת משתמש: " + (e?.message || e));
-  }
-}
 
 async function resetEmailPass(){
   fbInitOnce();
