@@ -1,0 +1,3292 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>ניהול מעשר כספים</title>
+
+  <style>
+    :root{
+      /* בהיר ויוקרתי יותר (ללא שינוי לוגיקה) */
+      --bg:#13224a;
+      --panel: rgba(255,255,255,.11);
+      --panel2: rgba(255,255,255,.075);
+      --line: rgba(170, 205, 255, .36);
+      --text:#fbfdff;
+      --muted: rgba(240, 247, 255, .90);
+      --accent:#8fe0ff;
+      --good:#34d399;
+      --bad:#fb7185;
+      --goodStrong:#00ff57; /* ירוק חזק לסטטוס */
+      --badStrong:#ff1a1a;  /* אדום חזק לסטטוס */
+      --purple:#c084fc;
+      --shadow: 0 18px 55px rgba(0,0,0,.38);
+      --radius: 18px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, "Segoe UI", Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1100px 700px at 20% -10%, rgba(125,211,252,.28), transparent 62%),
+        radial-gradient(900px 600px at 105% 0%, rgba(52,211,153,.16), transparent 52%),
+        radial-gradient(900px 800px at 110% 110%, rgba(251,113,133,.16), transparent 52%),
+        linear-gradient(180deg, #0b1022, var(--bg));
+      min-height:100vh;
+      padding:16px 16px 100px;
+    }
+
+
+/* ===== Top header (Main title + moved controls) ===== */
+.topbar{
+  max-width: 1500px;
+  margin:0 auto 14px;
+  padding:10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel), var(--panel2));
+  box-shadow: var(--shadow);
+  display:flex;
+  align-items:center;
+  justify-content:center; /* title centered */
+  gap:12px;
+  position: relative;     /* allow left docking of controls */
+}
+.topbar-title{
+  margin:0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
+}
+.topbar-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-start;
+  min-width: 0;
+  position: absolute;
+  left: 14px;          /* move the 4 buttons to the left */
+  top: 50%;
+  transform: translateY(-50%);
+}
+.topbar-left .btn-row{
+  gap:10px;
+  flex-wrap:nowrap;
+}
+@media (max-width: 600px){
+  .topbar{ flex-wrap:wrap; }
+  .topbar-left{ position:static; transform:none; left:auto; top:auto; width:100%; justify-content:center; }
+}
+
+    /* ===== Layout ===== */
+    .layout{
+      max-width: 1500px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:14px;
+    }
+    @media (max-width: 1080px){
+      .layout{grid-template-columns: 1fr;}
+    }
+
+    .card{
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      min-height: 78vh;
+      display:flex;
+      flex-direction:column;
+    }
+    .card-hd{
+      padding:6px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      min-height: 56px;
+      flex-wrap: nowrap;
+      border-bottom:1px solid rgba(30,43,79,.85);
+      background:
+        linear-gradient(90deg, rgba(125,211,252,.10), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.03), transparent);
+    }
+    .title{
+      display:flex; align-items:center; gap:10px;
+      margin:0;
+      font-size: 19px;
+      letter-spacing:.2px;
+      white-space:nowrap;
+      flex-shrink:0;
+    }
+
+    /* ===== Inputs / Selects ===== */
+    .input, .select{
+      width:100%;
+      padding:9px 10px;
+      font-size:12px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      outline: none;
+      transition: all 0.2s;
+    }
+    .input::placeholder{ color: rgba(169,183,214,.75); }
+
+    .input:focus, .select:focus{
+      border-color: var(--accent);
+      box-shadow: 0 0 15px rgba(125, 211, 252, 0.45);
+      background: rgba(255,255,255,.10);
+    }
+
+    #desc1, #amount1, #desc2, #amount2, #desc3, #amount3 {
+      border-color: rgba(125, 211, 252, 0.6);
+      box-shadow: 0 0 8px rgba(125, 211, 252, 0.2);
+      background: rgba(255,255,255,.08);
+    }
+    #desc1:focus, #amount1:focus, #desc2:focus, #amount2:focus, #desc3:focus, #amount3:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 18px rgba(125, 211, 252, 0.6);
+    }
+
+    .entry{
+      padding:10px 16px;
+      display:grid;
+      grid-template-columns: 54px 1.15fr .55fr .6fr auto;
+      gap:8px;
+      align-items:center;
+    }
+    
+    /* התאמה למסגרת הימנית (ניהול מעשר): תאריך רחב יותר, תיאור צר יותר */
+    #entry2{
+      grid-template-columns: 54px 1.0fr .55fr .6fr auto;
+    }
+
+
+    /* התאמה למסגרת השמאלית-נוספת (ניהול חומש): כמו מעשר */
+    #entry3{
+      grid-template-columns: 54px 1.0fr .55fr .6fr auto;
+    }
+    /* התאמה למסגרת השמאלית (ניהול הכנסות): תאריך רחב יותר, תיאור צר יותר */
+    #entry1{
+      /* הכנסות: תיאור צר יותר + סכום מעט ימינה כדי להגדיל את בחירת הכנסה/הוצאה */
+      grid-template-columns: 54px 0.95fr .60fr .85fr auto;
+    }
+/* Mobile adjustments for entry row */
+    @media (max-width: 600px){
+        .entry{ grid-template-columns: 1fr 1fr; gap: 10px; }
+        .entry > *:nth-child(1) { grid-column: 1 / -1; } /* Description full width */
+    }
+
+    .type-chip{display:flex; gap:6px; align-items:center;}
+    .type-chip .select{width:100%;}
+
+    .table-wrap{
+      margin:0 14px 14px;
+      border:1px solid rgba(169,183,214,.12);
+      border-radius: 14px;
+      overflow-y:auto;
+      overflow-x:hidden; /* בלי גלילה אופקית */
+      flex:1;
+      background: rgba(255,255,255,.04);
+    }
+
+    table{width:100%; border-collapse:collapse; font-size:11.5px; table-layout:fixed; min-width:0;}
+    th{
+      position:sticky; top:0;
+      background: rgba(14,22,46,.96);
+      border-bottom:1px solid rgba(169,183,214,.14);
+      padding:6px 6px;
+      color: rgba(233,240,255,.90);
+      text-align:center;
+      white-space:nowrap;
+      z-index: 10;
+    }
+    td{
+      border-bottom:1px solid rgba(169,183,214,.08);
+      padding:3px 6px;
+      text-align:center;
+      white-space:nowrap;
+      line-height: 1.15;
+    }
+
+    /* התאמת רוחב שורות פעילות - ללא גלילה אופקית */
+    th:nth-child(1), td:nth-child(1){width:86px;}
+    th:nth-child(3), td:nth-child(3){width:92px;}
+    th:nth-child(4), td:nth-child(4){width:78px;}
+    th:nth-child(2), td:nth-child(2){
+      white-space:normal;
+      word-break:break-word;
+    }
+    tr:hover td{background: rgba(255,255,255,.03);}
+    .amt-good{color: var(--good); font-weight:800;}
+    .amt-bad{color: var(--bad); font-weight:800;}
+    .actions{display:flex; justify-content:center; gap:8px; font-size:12px;}
+    .act{
+      cursor:pointer;
+      padding:2px 6px;
+      border-radius:8px;
+      border:1px solid rgba(169,183,214,.16);
+      background: rgba(255,255,255,.04);
+      user-select:none;
+    }
+    .act:hover{background: rgba(255,255,255,.08);}
+
+    /* ===== Bottom system bar ===== */
+    .sysbar{
+      position:fixed;
+      left: 0; right: 0; bottom: 0;
+      height: 70px;
+      background: rgba(10,16,34,.92);
+      backdrop-filter: blur(14px);
+      border-radius: 18px 18px 0 0;
+      border-top: 1px solid rgba(169,183,214,.18);
+      box-shadow: 0 -10px 40px rgba(0,0,0,.55);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 0 20px;
+      gap: 12px;
+      z-index: 900;
+    }
+    .sysbar{ direction: rtl; }
+
+    .sysbar::before{
+        content:""; position:absolute; left: 10px; right: 10px; top: 0; height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(139,224,255,.5), transparent);
+    }
+    
+    @media (max-width: 768px){
+      .sysbar{ height: auto; flex-direction: column; padding: 15px; gap: 12px; }
+      .sys-right{ width:100%; text-align:center; }
+      .sys-left{ width:100%; justify-content:center; flex-wrap:wrap; }
+      .sys-center{ width:100%; justify-content:center; }
+      body{ padding-bottom: 220px; }
+    }
+
+        .sys-center{
+  order: 3;
+  min-width: fit-content;
+  display:flex;
+  justify-content:flex-start;
+  align-items:center;
+}
+        
+.sys-right{
+  order: 1;
+  min-width: fit-content;
+  font-weight:900;
+  color: var(--accent);
+  font-size:13px;
+  white-space:nowrap;
+}
+
+.status-box{
+  padding:6px 12px; /* קומפקטי יותר כדי ששורות הפעילות יתחילו באותו גובה */
+  border-radius:12px;
+  border:1px solid rgba(160, 190, 255, .28);
+  background: rgba(255,255,255,.05);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  font-weight:900;
+  font-size:14px;
+  min-width: 170px;
+  text-align:center;
+  letter-spacing: .2px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* ===== התאמת רוחב/גובה תיבות הסטטוס (יתרה / עודף-חוב מעשר) ===== */
+:root{ --statusW: 240px; } /* אפשר לשנות כאן אם תרצה יותר/פחות */
+#balanceBox,
+#statusBoxA,
+#statusBoxAAll,
+#statusBoxB,
+#statusBoxBAll{
+  width: var(--statusW);
+  min-width: var(--statusW);
+  box-sizing: border-box;
+}
+#balanceBox{ /* להבטיח גובה זהה לתיבת מעשר */
+  padding:6px 12px;
+  line-height:1.1;
+  font-size:14px;
+}
+@media (max-width: 600px){
+  :root{ --statusW: 100%; }
+  #balanceBox,#statusBoxA,#statusBoxAAll{ min-width:0; width:100%; }
+}
+
+
+    /* מסגרות סטטוס קבועות לפי קטגוריה */
+    .status-maaser{
+      border-color: rgba(52,211,153,.60) !important;
+      border-width: 1px !important;
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03)) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 26px rgba(0,0,0,.22) !important;
+    }
+  
+    /* צבעי טקסט */
+    .label-maaser{ color: var(--goodStrong) !important; font-weight: 950; }
+    .amt-surplus{ color: var(--goodStrong) !important; font-weight: 950; display:inline-block; margin-right:10px; }
+    .amt-due{ color: var(--badStrong) !important; font-weight: 950; display:inline-block; margin-right:10px; }
+    /* היתרה תמיד תכלת */
+    .balance-box{
+      border-color: rgba(125,211,252,.70) !important;
+      border-width: 1px !important;
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03)) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 26px rgba(0,0,0,.22) !important;
+      color: rgba(125,211,252,.95) !important;
+    }
+    .balance-box #netBalanceDisplay{
+      color: var(--accent) !important;
+      font-weight: 950;
+    }
+
+    /* צבע טקסט לפי חוב/עודף */
+    .txt-good{ color: var(--goodStrong) !important; text-shadow: 0 0 10px rgba(0,255,120,.45); }
+    .txt-bad{ color: var(--badStrong) !important; text-shadow: 0 0 10px rgba(255,0,60,.45); }
+.status-green #statusA{ color: inherit; }
+
+    @media (max-width: 768px){
+      .sysbar{ height: auto; flex-direction: column; padding: 15px; gap: 12px; }
+      .sys-right{ width:100%; text-align:center; }
+      .sys-left{ width:100%; justify-content:center; flex-wrap:wrap; }
+      .sys-center{ width:100%; justify-content:center; }
+      body{ padding-bottom: 220px; }
+    }
+
+    .sys-left{
+  order: 2;
+  flex: 1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+  white-space:nowrap;
+}
+
+    .sys-center{
+  min-width: fit-content;
+  display:flex;
+  justify-content:flex-start;
+  align-items:center;
+}
+
+    .btn-row{
+      display:flex;
+      align-items:center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .sys-right{
+  min-width: fit-content;
+  font-weight:900;
+  color: var(--accent);
+  font-size:13px;
+  white-space:nowrap;
+}
+
+    .prog{
+      display:flex; flex-direction:column; gap:4px;
+      padding:5px 10px;
+      border-radius: 12px;
+      border:1px solid rgba(169,183,214,.14);
+      background: rgba(255,255,255,.06);
+      min-width: 150px;
+    }
+    .prog-top{display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:900; gap:10px; padding:0 2px; line-height:1.25;}
+    .prog-top > span:last-child{ color: var(--muted); }
+
+
+    .bar{
+        height:9px;
+        border-radius:999px; 
+        background: rgba(255,255,255,.06); 
+        overflow:hidden;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .bar > div{height:100%; width:0%; transition: width .65s cubic-bezier(0.4, 0, 0.2, 1); background-image: linear-gradient(rgba(255,255,255,0.15), transparent);}
+
+    /* ===== BUTTONS ===== */
+    .btn{
+      cursor:pointer;
+      border-radius: 10px;
+      border:1px solid rgba(169,183,214,.22);
+      background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.02));
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+      color: var(--text);
+      padding: 0 12px;
+      height: 34px;
+      font-size: 12px;
+      font-weight:700;
+      display:inline-flex; align-items:center; justify-content:center; gap:5px;
+      transition: .2s;
+      user-select:none;
+      white-space:nowrap;
+      flex-shrink: 0;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    /* אייקון למחזורית */
+    .ico-cycle{width:16px;height:16px;display:inline-block;}
+    .btn:hover{
+        transform: translateY(-2px);
+        background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+        box-shadow: 0 5px 15px rgba(0,0,0,.3);
+        border-color: rgba(169,183,214,.4);
+    }
+    .btn:active{transform: translateY(0); box-shadow: 0 1px 2px rgba(0,0,0,0.2);}
+
+    .btn.good{border-color: rgba(52,211,153,.4); background: linear-gradient(180deg, rgba(52,211,153,.15), rgba(52,211,153,.05)); color: rgba(120, 255, 205, .95);}
+    .btn.danger{border-color: rgba(251,211,153,.4); background: linear-gradient(180deg, rgba(251,113,133,.15), rgba(251,113,133,.05)); color: rgba(255, 160, 175, .95);}
+    .btn.purple{border-color: rgba(192,132,252,.4); background: linear-gradient(180deg, rgba(192,132,252,.15), rgba(192,132,252,.05)); color: rgba(220, 190, 255, .95);}
+    .btn.gray{border-color: rgba(169,183,214,.3); background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)); color: rgba(225,235,255,.90);}
+
+    #filterToggleBtn { margin-left: 15px; color: rgba(180, 235, 255, .98); }
+
+    .view-select{
+      appearance: none;
+      cursor:pointer;
+      height: 34px;
+      padding: 0 20px 0 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(169,183,214,.22);
+      background-color: rgba(255,255,255,.06);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 34px;
+      font-weight: 700;
+      flex-shrink: 0;
+      background-image: linear-gradient(45deg, transparent 50%, rgba(233,240,255,.8) 50%),
+                        linear-gradient(135deg, rgba(233,240,255,.8) 50%, transparent 50%);
+      background-position: calc(100% - 10px) 55%, calc(100% - 6px) 55%;
+      background-size: 4px 4px, 4px 4px;
+      background-repeat: no-repeat;
+    }
+    .view-select option{
+      background: #0f1a33;
+      color: var(--text);
+    }
+    .view-select:focus{
+      outline:none;
+      box-shadow: 0 0 0 3px rgba(140, 220, 255, .18);
+      border-color: rgba(140, 220, 255, .55);
+    }
+    #monthFilterMaster { max-width: 85px; }
+    #yearFilterMaster { max-width: 70px; }
+
+    /* ===== Excel Dropdown Menu ===== */
+    .excel-wrap{ position: relative; display: inline-block; }
+    .excel-menu{
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 8px;
+      width: 140px;
+      background: rgba(12,18,38,.96);
+      border: 1px solid rgba(125,211,252,.35);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.8);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 9999;
+    }
+    .excel-menu.show { display: flex; }
+    .excel-item{
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text);
+      transition: .15s;
+      text-align: center;
+    }
+    .excel-item:hover{ background: rgba(125,211,252,.15); }
+    .excel-item:not(:last-child){ border-bottom: 1px solid rgba(255,255,255,.08); }
+
+
+    /* ===== Popups & Modals ===== */
+    
+    /* ===== תיקון מבוקש: חלון סינון ש"בורח החוצה" - חלון צף מרכזי ===== */
+        /* חלון סינון יוקרתי - קפסולה גמישה */
+    .filter-popover {
+      display: none;
+      position: fixed;
+      top: 85px; 
+      left: 50%;
+      transform: translateX(-50%); /* שומר על מרכז המסך */
+      z-index: 2000;
+      background: rgba(15, 26, 51, 0.96);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--accent);
+      padding: 8px 18px;
+      border-radius: 100px; /* צורת קפסולה ארוכה */
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 15px rgba(125,211,252,0.15);
+
+      width: max-content; /* גמיש לפי התוכן */
+      max-width: 95vw;    /* מונע בריחה מהצדדים */
+      white-space: nowrap;
+      animation: popIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    .filter-grid {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* כפתור לוח שנה קטן ויוקרתי בתוך השדה */
+    .cal-btn-inner {
+      position: absolute;
+      left: 8px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      color: var(--accent);
+      padding: 0;
+      transition: 0.2s;
+    }
+    .cal-btn-inner:hover { transform: scale(1.2); filter: drop-shadow(0 0 5px var(--accent)); }
+
+    /* כפתור נקה חיפוש ורוד */
+    #clearSearchMaster {
+      background: rgba(251, 113, 133, 0.12);
+      border: 1px solid rgba(251, 113, 133, 0.4);
+      color: #fb7185;
+      border-radius: 50px;
+      height: 34px;
+      padding: 0 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+/* ===== ✅ FIXED CALENDAR POPUP - תיקון מס' 2: לוח שנה יוקרתי ומתרחב ===== */
+    .date-popup{
+      position: fixed;
+      z-index: 11000 !important; /* מעל חלון הסינון */
+      background: rgba(16, 26, 50, 0.98) !important; /* כהה יותר */
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(125,211,252,.35);
+      border-radius: 18px; /* מעוגל יותר */
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 20px rgba(125,211,252,0.1);
+      padding: 15px;
+      
+      /* רוחב מותאם לתוכן - ללא גלישה */
+      width: max-content !important;
+      min-width: 320px;
+      max-width: calc(100vw - 20px);
+
+      left: 0; top: 0;
+      color: var(--text);
+    }
+    .dp-header{
+      display:flex; justify-content:space-between; margin-bottom:12px; align-items:center;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 8px;
+    }
+    .dp-nav{
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,0.1); color:#fff; 
+      border-radius:10px; width:28px; height:28px; cursor:pointer; line-height:26px; transition:0.2s;
+    }
+    .dp-nav:hover { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
+    
+    .dp-title{font-weight:900; color:var(--accent); font-size:15px; letter-spacing: 0.5px; text-shadow: 0 0 10px rgba(125,211,252,0.4);}
+    
+    .dp-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    .dp-day {
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; /* עגול */
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.02);
+    }
+    .dp-day:hover {
+      background: rgba(125,211,252,0.2);
+      border-color: rgba(125,211,252,0.4);
+      transform: scale(1.1);
+    }
+    .dp-today {
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      box-shadow: inset 0 0 8px rgba(125,211,252,0.2);
+    }
+
+    .overlay{ position:fixed; inset:0; background: rgba(0,0,0,.7); display:none; z-index: 1000; }
+    .modal{
+      position:fixed; top:50%; left:50%; transform: translate(-50%, -50%);
+      width: min(420px, 92vw);
+      max-height: 80vh; overflow:auto; display:none; z-index: 1001;
+      background: #111b33; border:1px solid rgba(125,211,252,.3); border-radius: 16px;
+      padding:16px; box-shadow: 0 25px 80px rgba(0,0,0,.8);
+    }
+    .section{
+      background:rgba(255,255,255,.03); border-radius:10px; padding:8px 10px; margin-bottom:8px;
+      border:1px solid rgba(255,255,255,.05);
+    }
+    .section h4 { font-size: 13px; margin-bottom: 6px; }
+    .fixed-row{ display:grid; grid-template-columns: 2fr 1fr 1fr auto auto; gap:6px; align-items:end; margin-bottom:6px; }
+    .fixed-row label{font-size:9px; color:#888; display:block; margin-bottom:1px;}
+    .fixed-row .input { padding: 5px 8px; font-size: 11px; height: 28px; }
+
+    /* משכנתא במחזורית: תצוגה מורחבת (שורה 1 שם+קרן ארוכים, שורה 2 רישום+ריבית וכו') */
+    .mort-row{
+      display:flex;
+      flex-direction: column;
+      gap:8px;
+      margin-bottom:12px;
+      padding-bottom:12px;
+      border-bottom: 1px dashed rgba(255,255,255,0.15);
+    }
+    .mort-row-line {
+      display:grid;
+      gap:6px;
+      align-items:end;
+    }
+    .mort-row-line.l1 { grid-template-columns: 1.5fr 1.5fr 0.8fr; } /* הקרן והשם התרחבו מאוד */
+    .mort-row-line.l2 { grid-template-columns: 1.2fr 0.9fr 1fr 0.7fr auto auto; } /* בחירת התקציב נוספה לכאן */
+    .mort-row label{font-size:9px; color:#888; display:block; margin-bottom:1px; white-space:nowrap;}
+    .mort-row .input, .mort-row select { padding:5px 8px; font-size:11px; height:28px; width:100%; border-radius:8px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:var(--text); }
+    /* רקע שחור לתפריט הנפתח של "רישום בתקציב" במשכנתא */
+    .mort-row select { background:#000 !important; }
+    .mort-row select option { background:#000; color:#fff; }
+
+    @media (max-width: 520px){
+      .mort-row-line.l1, .mort-row-line.l2 { grid-template-columns: 1fr 1fr; }
+      .mort-row-line.l1 > *:nth-child(3) { grid-column: 1 / -1; } /* אחוזים יורד שורה בנייד */
+      .mort-row-line.l2 > *:nth-child(1) { grid-column: 1 / -1; } /* רישום בתקציב יתפוס שורה שלמה בנייד */
+      .mort-row-line.l2 button{ grid-column: span 1; }
+    }
+
+
+    /* AUTH (כניסה / הגדרת סיסמה) */
+#lock{
+  position:fixed; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  z-index:9999;
+  background:
+    radial-gradient(900px 650px at 15% 10%, rgba(56,189,248,.30), transparent 60%),
+    radial-gradient(900px 650px at 90% 15%, rgba(168,85,247,.26), transparent 58%),
+    radial-gradient(1000px 700px at 55% 95%, rgba(34,197,94,.18), transparent 60%),
+    linear-gradient(180deg, rgba(5,8,18,.86), rgba(6,10,22,.92));
+  backdrop-filter: blur(12px);
+  overflow:hidden;
+}
+#lock::before{
+  content:"";
+  position:absolute; inset:-40%;
+  background:
+    conic-gradient(from 210deg, rgba(56,189,248,.14), rgba(168,85,247,.12), rgba(34,197,94,.10), rgba(56,189,248,.14));
+  filter: blur(40px);
+  animation: authSpin 16s linear infinite;
+  opacity:.9;
+
+  pointer-events:none;
+}
+#lock::after{
+  content:"";
+  position:absolute; inset:0;
+  background: radial-gradient(1200px 800px at 50% 40%, rgba(255,255,255,.06), transparent 60%);
+  pointer-events:none;
+}
+@keyframes authSpin{
+  from{ transform: rotate(0deg); }
+  to{ transform: rotate(360deg); }
+}
+
+.login-card{
+  position:relative;
+  width: 340px;
+  padding: 30px 26px 22px 26px;
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,.16);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+  box-shadow:
+    0 26px 90px rgba(0,0,0,.62),
+    0 0 0 1px rgba(255,255,255,.06) inset;
+  backdrop-filter: blur(14px);
+  transform: translateY(0);
+  animation: authFloat 5.5s ease-in-out infinite;
+  text-align:center;
+}
+.login-card::before{
+  content:"";
+  position:absolute; inset:-1px;
+  border-radius: 26px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(56,189,248,.55), rgba(168,85,247,.45), rgba(34,197,94,.35));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity:.9;
+  pointer-events:none;
+}
+@keyframes authFloat{
+  0%,100%{ transform: translateY(0); }
+  50%{ transform: translateY(-6px); }
+}
+
+.login-badge{
+  width:68px; height:68px;
+  border-radius: 24px;
+  display:grid; place-items:center;
+  margin: 0 auto 12px auto;
+  font-size: 30px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(56,189,248,.55), rgba(255,255,255,.06) 60%),
+    linear-gradient(135deg, rgba(168,85,247,.18), rgba(34,197,94,.10));
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow:
+    0 14px 40px rgba(0,0,0,.45),
+    0 0 40px rgba(56,189,248,.12);
+}
+
+.login-title{
+  margin:0 0 6px 0;
+  font-size: 22px;
+  letter-spacing: .2px;
+  color: var(--text);
+  text-shadow: 0 10px 30px rgba(0,0,0,.35);
+  text-align:center;
+}
+.login-sub{
+  margin:0 0 16px 0;
+  font-size: 13px;
+  color: rgba(235,244,255,.84);
+  line-height: 1.35;
+  text-align:center;
+}
+.login-hint{
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(226,232,240,.78);
+  line-height: 1.35;
+  min-height: 16px;
+  text-align:center;
+}
+
+/* inputs */
+#lock .input{
+  width:100%;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(10,16,34,.45);
+  color: rgba(240,248,255,.95);
+  outline: none;
+  box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+#lock .input::placeholder{ color: rgba(226,232,240,.55); }
+#lock .input:focus{
+  border-color: rgba(56,189,248,.45);
+  background: rgba(10,16,34,.60);
+  box-shadow:
+    0 12px 28px rgba(0,0,0,.42),
+    0 0 0 4px rgba(56,189,248,.14);
+  transform: translateY(-1px);
+}
+
+/* buttons (ויזואלי) */
+#lock .btn{
+  border-radius: 14px;
+  height: 44px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  box-shadow: 0 14px 40px rgba(0,0,0,.45);
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+#btnLogin, #btnSetup{
+  background: linear-gradient(135deg, rgba(56,189,248,.98), rgba(168,85,247,.82), rgba(34,197,94,.72));
+  color: #061022;
+  border: 0;
+  position: relative;
+  overflow: hidden;
+}
+#btnLogin::after, #btnSetup::after{
+  content:"";
+  position:absolute; inset:-30% -40%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.55), transparent 45%);
+  transform: rotate(12deg);
+  opacity:.35;
+  pointer-events:none;
+}
+#btnLogin:hover, #btnSetup:hover{
+  transform: translateY(-1px);
+  filter: saturate(1.08);
+  box-shadow:
+    0 18px 55px rgba(0,0,0,.55),
+    0 0 0 4px rgba(168,85,247,.10);
+}
+#btnLogin:active, #btnSetup:active{
+  transform: translateY(1px);
+  box-shadow: 0 10px 28px rgba(0,0,0,.48);
+}
+
+    /* ===== Status text: label fixed color, amount dynamic color ===== */
+    .status-label-maaser{ color: var(--goodStrong); font-weight: 950; }
+    .status-amount{ margin-inline-start: 8px; font-weight: 950; }
+    /* ===== Overrides per request: header tight + filter system + calendar layout ===== */
+body{ padding-top:10px !important; }
+
+/* Header tight, no separate frame */
+.topbar{
+  max-width: 1600px !important;
+  margin:0 auto 8px !important;
+  padding:0 10px !important;
+  border:none !important;
+  background: transparent !important;
+  box-shadow:none !important;
+  border-radius:0 !important;
+}
+.topbar-title{
+  font-size:24px !important;
+  font-weight:800 !important;
+  color: var(--accent) !important;
+}
+
+/* Make panels sit closer to header */
+.layout{ margin-top:0 !important; }
+
+/* Calendar: new layout (grid days) */
+
+  
+    /* ===== Status cluster (Balance + Maaser) ===== */
+    .triple-wrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:nowrap;
+    }
+@media (max-width: 600px){
+      .triple-wrap{justify-content:center; flex-wrap:wrap; }
+
+      .balance-box{ width:100%; min-width: 0; }
+    }
+
+  
+    
+
+    /* ===== Dual Maaser status boxes (filtered vs all-time) ===== */
+    .status-duo{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:nowrap;
+      justify-content:flex-end;
+      flex: 0 0 auto;
+      min-width: 0;
+    }
+    .status-stack{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width: 0;
+      flex: 1 1 0;
+    }
+    .status-note{
+      font-size:9.5px;
+      font-weight:800;
+      color: rgba(235, 244, 255, .78);
+      text-align:center;
+      letter-spacing:.2px;
+      line-height:1.05;
+      white-space:nowrap;
+    }
+    @media (max-width: 600px){
+      .status-stack{ min-width: 0; width:100%; }
+      .status-duo{ justify-content:center; }
+    }
+
+/* ===== שינוי 1: הסתרת כפתור/בחירת "מעשר" בשורת ההזנה (עדיין נשמר ללוגיקה) ===== */
+    #chip2{ display:none !important; }
+
+    
+
+/* ===== שינוי 1b: הסתרת בחירת "חומש" בשורת ההזנה (כמו מעשר) ===== */
+    #chip3{ display:none !important; }
+/* ===== שינוי 2: צבעים דינמיים למשבצות יתרה/מעשר ===== */
+    .status-box.box-good{
+      border-color: rgba(0,255,120,.92) !important;
+      background: linear-gradient(180deg, rgba(0,255,120,.28), rgba(0,255,120,.10)) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.26), 0 0 18px rgba(0,255,120,.28) !important;
+      color: rgba(235,255,245,.99) !important;
+    }
+    .status-box.box-bad{
+      border-color: rgba(255,0,60,.92) !important;
+      background: linear-gradient(180deg, rgba(255,0,60,.26), rgba(255,0,60,.10)) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.26), 0 0 18px rgba(255,0,60,.24) !important;
+      color: rgba(255,238,240,.99) !important;
+    }
+    
+    /* ===== יתרה בניהול הכנסות: צבע תכלת קבוע (לא משתנה לפי חוב/עודף) ===== */
+    .status-box.balance-box,
+    .status-box.balance-box.box-good,
+    .status-box.balance-box.box-bad{
+      border-color: rgba(0,210,255,.95) !important;
+      background: linear-gradient(180deg, rgba(0,210,255,.28), rgba(0,210,255,.10)) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.26), 0 0 18px rgba(0,210,255,.30) !important;
+      color: rgba(230,250,255,.99) !important;
+    }
+    .balance-box #netBalanceDisplay{
+      color: rgba(230,250,255,.99) !important;
+      font-weight: 950;
+    }
+/* שכל הטקסט בפנים יקבל את צבע המשבצת */
+    .status-box.box-good *,.status-box.box-bad *{
+      color: inherit !important;
+    }
+
+  
+/* === PATCH: Center bottom button bar + nicer selects (income/expense, month, year) === */
+.sysbar{ justify-content: center !important; }
+.sys-center{ flex: 1 !important; justify-content: center !important; }
+
+/* Nicer dropdowns: income/expense + month + year */
+#type1, #monthFilterMaster, #yearFilterMaster{
+  border: 1px solid rgba(255,255,255,.18) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)) !important;
+  color: rgba(245,250,255,.98) !important;
+  font-weight: 900 !important;
+  font-size: 14px !important;
+  letter-spacing: .2px;
+  text-shadow: 0 1px 2px rgba(0,0,0,.55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 8px 22px rgba(0,0,0,.25);
+}
+
+/* HOT highlight (month/year selected + type dropdown) */
+.hot-select{
+  border-color: rgba(251,113,133,.78) !important;
+  color: rgba(255,210,220,.98) !important;
+  background: linear-gradient(180deg, rgba(251,113,133,.18), rgba(255,255,255,.04)) !important;
+  box-shadow: 0 0 0 2px rgba(251,113,133,.12), 0 10px 28px rgba(0,0,0,.28) !important;
+}
+
+#type1:focus, #monthFilterMaster:focus, #yearFilterMaster:focus{
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 18px rgba(125, 211, 252, 0.55), inset 0 1px 0 rgba(255,255,255,.10) !important;
+}
+
+
+
+/* === PATCH: Prettier font + visible dropdown options (income/expense, month, year) === */
+#type1, #monthFilterMaster, #yearFilterMaster{
+  font-family: "Rubik","Assistant","Heebo","Segoe UI",system-ui,sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+/* Make option list readable (prevents white-on-white in the native dropdown) */
+#type1 option, #monthFilterMaster option, #yearFilterMaster option{
+  background: #0b1226;
+  color: rgba(245,250,255,.98);
+}
+#type1 optgroup, #monthFilterMaster optgroup, #yearFilterMaster optgroup{
+  background: #0b1226;
+  color: rgba(245,250,255,.98);
+}
+
+/* Keep filter panel inside the viewport (no browser overflow) */
+#filterPopover{
+  max-width: calc(100vw - 18px) !important;
+  max-height: calc(100vh - 92px) !important;
+  overflow: auto !important;
+}
+
+    /* ✅ Date Capsule (custom DP) */
+    .datewrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 54px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      cursor: pointer;
+      transition: all 0.2s;
+      overflow: hidden;
+    }
+
+    .datewrap:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent);
+    }
+
+    .date-input {
+      display: none; /* מוסתר - התאריך נשמר פנימית */
+      width: 100%;
+      flex: 1;
+      border: none !important;
+      background: transparent !important;
+      padding: 10px;
+      color: var(--text);
+      outline: none;
+      font-size: 13px;
+      cursor: pointer;
+      pointer-events: none; /* click handled by .datewrap */
+    }
+
+    .cal-btn {
+      width: 54px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: none;
+      border-right: none;
+      color: var(--accent);
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+
+
+    /* תצוגת תאריך לועזי בסדר יום/חודש/שנה (יום משמאל, שנה מימין) */
+    #entryDate, #searchStartMaster, #searchEndMaster,
+    #date1, #date2, #date3 {
+      direction: ltr;
+      unicode-bidi: bidi-override;
+      text-align: right; /* שומר על יישור יפה בתוך RTL */
+    }
+
+  .add-icon{ width:36px; padding:0; justify-content:center; background: rgba(125,211,252,.1); border-color: rgba(125,211,252,.3); }
+
+    #lblA, #remA, .prog:has(#barCat1) .prog-top span:first-child { color: var(--good) !important; }
+
+    .hidden{display:none !important;}
+  
+
+    /* ===== Status text: label fixed color, amount dynamic color ===== */
+    .status-label-maaser{ color: var(--goodStrong); font-weight: 950; }
+    .status-amount{ margin-inline-start: 8px; font-weight: 950; }
+    /* ===== Overrides per request: header tight + filter system + calendar layout ===== */
+body{ padding-top:10px !important; }
+
+/* Header tight, no separate frame */
+.topbar{
+  max-width: 1600px !important;
+  margin:0 auto 8px !important;
+  padding:0 10px !important;
+  border:none !important;
+  background: transparent !important;
+  box-shadow:none !important;
+  border-radius:0 !important;
+}
+.topbar-title{
+  font-size:24px !important;
+  font-weight:800 !important;
+  color: var(--accent) !important;
+}
+
+/* Make panels sit closer to header */
+.layout{ margin-top:0 !important; }
+
+/* Calendar: new layout (grid days) */
+
+  
+    /* ===== Status cluster (Balance + Maaser) ===== */
+    .triple-wrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:nowrap;
+    }
+@media (max-width: 600px){
+      .triple-wrap{justify-content:center; flex-wrap:wrap; }
+
+      .balance-box{ width:100%; min-width: 0; }
+    }
+
+  
+    
+
+    /* ===== Dual Maaser status boxes (filtered vs all-time) ===== */
+    .status-duo{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:nowrap;
+      justify-content:flex-end;
+      flex: 0 0 auto;
+      min-width: 0;
+    }
+    .status-stack{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width: 0;
+      flex: 1 1 0;
+    }
+    .status-note{
+      font-size:9.5px;
+      font-weight:800;
+      color: rgba(235, 244, 255, .78);
+      text-align:center;
+      letter-spacing:.2px;
+      line-height:1.05;
+      white-space:nowrap;
+    }
+    @media (max-width: 600px){
+      .status-stack{ min-width: 0; width:100%; }
+      .status-duo{ justify-content:center; }
+    }
+
+/* ===== שינוי 1: הסתרת כפתור/בחירת "מעשר" בשורת ההזנה (עדיין נשמר ללוגיקה) ===== */
+    #chip2{ display:none !important; }
+
+    /* ===== שינוי 2: צבעים דינמיים למשבצות יתרה/מעשר ===== */
+    .status-box.box-good{
+      border-color: rgba(0,255,120,.92) !important;
+      background: linear-gradient(180deg, rgba(0,255,120,.28), rgba(0,255,120,.10)) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.26), 0 0 18px rgba(0,255,120,.28) !important;
+      color: rgba(235,255,245,.99) !important;
+    }
+    .status-box.box-bad{
+      border-color: rgba(255,0,60,.92) !important;
+      background: linear-gradient(180deg, rgba(255,0,60,.26), rgba(255,0,60,.10)) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.26), 0 0 18px rgba(255,0,60,.24) !important;
+      color: rgba(255,238,240,.99) !important;
+    }
+    /* שכל הטקסט בפנים יקבל את צבע המשבצת */
+    .status-box.box-good *,.status-box.box-bad *{
+      color: inherit !important;
+    }
+
+  
+/* === PATCH: Center bottom button bar + nicer selects (income/expense, month, year) === */
+.sysbar{ justify-content: center !important; }
+.sys-center{ flex: 1 !important; justify-content: center !important; }
+
+/* Nicer dropdowns: income/expense + month + year */
+#type1, #monthFilterMaster, #yearFilterMaster{
+  border: 1px solid rgba(255,255,255,.18) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)) !important;
+  color: rgba(245,250,255,.98) !important;
+  font-weight: 900 !important;
+  font-size: 14px !important;
+  letter-spacing: .2px;
+  text-shadow: 0 1px 2px rgba(0,0,0,.55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 8px 22px rgba(0,0,0,.25);
+}
+
+/* HOT highlight (month/year selected + type dropdown) */
+.hot-select{
+  border-color: rgba(251,113,133,.78) !important;
+  color: rgba(255,210,220,.98) !important;
+  background: linear-gradient(180deg, rgba(251,113,133,.18), rgba(255,255,255,.04)) !important;
+  box-shadow: 0 0 0 2px rgba(251,113,133,.12), 0 10px 28px rgba(0,0,0,.28) !important;
+}
+
+#type1:focus, #monthFilterMaster:focus, #yearFilterMaster:focus{
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 18px rgba(125, 211, 252, 0.55), inset 0 1px 0 rgba(255,255,255,.10) !important;
+}
+
+
+
+/* === PATCH: Prettier font + visible dropdown options (income/expense, month, year) === */
+#type1, #monthFilterMaster, #yearFilterMaster{
+  font-family: "Rubik","Assistant","Heebo","Segoe UI",system-ui,sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+/* Make option list readable (prevents white-on-white in the native dropdown) */
+#type1 option, #monthFilterMaster option, #yearFilterMaster option{
+  background: #0b1226;
+  color: rgba(245,250,255,.98);
+}
+#type1 optgroup, #monthFilterMaster optgroup, #yearFilterMaster optgroup{
+  background: #0b1226;
+  color: rgba(245,250,255,.98);
+}
+
+/* Keep filter panel inside the viewport (no browser overflow) */
+#filterPopover{
+  max-width: calc(100vw - 18px) !important;
+  max-height: calc(100vh - 92px) !important;
+  overflow: auto !important;
+}
+
+    /* ✅ Date Capsule (custom DP) */
+    .datewrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 54px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      cursor: pointer;
+      transition: all 0.2s;
+      overflow: hidden;
+    }
+
+    .datewrap:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent);
+    }
+
+    .date-input {
+      display: none; /* מוסתר - התאריך נשמר פנימית */
+      width: 100%;
+      flex: 1;
+      border: none !important;
+      background: transparent !important;
+      padding: 10px;
+      color: var(--text);
+      outline: none;
+      font-size: 13px;
+      cursor: pointer;
+      pointer-events: none; /* click handled by .datewrap */
+    }
+
+    .cal-btn {
+      width: 54px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: none;
+      border-right: none;
+      color: var(--accent);
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+
+
+    /* תצוגת תאריך לועזי בסדר יום/חודש/שנה (יום משמאל, שנה מימין) */
+    #entryDate, #searchStartMaster, #searchEndMaster,
+    #date1, #date2, #date3 {
+      direction: ltr;
+      unicode-bidi: bidi-override;
+      text-align: right; /* שומר על יישור יפה בתוך RTL */
+    }
+
+  
+    /* כפתור גיבוי זורח ובולט במיוחד */
+    @keyframes backupGlow {
+      0%   { box-shadow: 0 0 0 rgba(120, 208, 255, 0), 0 6px 16px rgba(0,0,0,0.35); transform: translateY(0); }
+      50%  { box-shadow: 0 0 18px rgba(120, 208, 255, 0.65), 0 0 36px rgba(184, 120, 255, 0.45), 0 10px 22px rgba(0,0,0,0.45); transform: translateY(-1px); }
+      100% { box-shadow: 0 0 0 rgba(120, 208, 255, 0), 0 6px 16px rgba(0,0,0,0.35); transform: translateY(0); }
+    }
+    #btnBackup{
+      font-weight: 900;
+      letter-spacing: .4px;
+      border-color: rgba(255, 255, 255, 0.55);
+      color: #ffffff;
+      background: linear-gradient(135deg, rgba(255, 77, 109, 0.95), rgba(168, 85, 247, 0.95), rgba(34, 211, 238, 0.95), rgba(52, 211, 153, 0.95));
+      background-size: 240% 240%;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      animation: backupGlow 1.8s ease-in-out infinite, backupShift 4.2s ease-in-out infinite;
+    }
+    @keyframes backupShift{
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    #btnBackup::before{
+      content:"";
+      position:absolute;
+      inset:-6px;
+      background:
+        radial-gradient(120px 80px at 20% 30%, rgba(255, 255, 255, 0.60), transparent 60%),
+        radial-gradient(140px 100px at 80% 40%, rgba(255, 255, 255, 0.35), transparent 65%),
+        radial-gradient(180px 120px at 50% 120%, rgba(34, 211, 238, 0.35), transparent 60%);
+      filter: blur(10px);
+      opacity: 0.45;
+      mix-blend-mode: screen;
+      pointer-events:none;
+      z-index: 0;
+    }
+    #btnBackup:hover{
+      animation-duration: 1.1s, 3.0s;
+      filter: brightness(1.10) saturate(1.15);
+    }
+    #btnBackup:active{
+      transform: translateY(1px) scale(0.99);
+      filter: brightness(0.98) saturate(1.10);
+    }
+
+/* ===== תצוגה מקופלת (אקורדיון) למחזורית ===== */
+.item-summary {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; background: rgba(255,255,255,0.06);
+  border-radius: 10px; cursor: pointer; margin-bottom: 8px;
+  border: 1px solid rgba(255,255,255,0.1); transition: 0.2s;
+}
+.item-summary:hover { background: rgba(255,255,255,0.12); }
+.item-summary .item-title { font-weight: bold; font-size: 13px; }
+.item-summary .item-day { font-size: 11px; color: var(--accent); }
+.item-edit {
+  display: none; padding: 12px; background: rgba(0,0,0,0.25);
+  border-radius: 10px; margin-bottom: 12px;
+  border: 1px dashed rgba(255,255,255,0.15);
+}
+.item-edit.active { display: block; animation: popIn 0.3s ease; }
+
+
+    /* התאמה למובייל - שורות משכנתא */
+    @media (max-width: 520px) {
+      .mort-row-line { grid-template-columns: 1fr !important; gap: 8px !important; }
+      .mort-row-line > div { width: 100%; }
+    }
+
+</style>
+</head>
+
+<body>
+
+  
+  <div id="lock">
+    <div class="login login-card">
+      <div class="login-badge">☁️</div>
+
+      <div id="loginPanel" class="auth-panel">
+        <h2 class="login-title">כניסה לענן</h2>
+        <p class="login-sub">היכנס/י עם דוא״ל וסיסמה (Firebase) כדי להמשיך.</p>
+
+        <input class="input" type="email" id="emailInput" placeholder="דוא״ל" style="text-align:center; margin-bottom:10px;" />
+        <input class="input" type="password" id="passInput" placeholder="סיסמה" style="text-align:center; margin-bottom:12px;" />
+
+        <button class="btn" id="btnLogin" onclick="checkPasswordSafe()" style="width:100%;">כניסה</button>
+        <button class="btn" id="btnRegister" onclick="registerEmailPass()" style="width:100%; margin-top:10px; background: linear-gradient(135deg, rgba(34,197,94,.88), rgba(56,189,248,.78)); color:#061022; border:0;">יצירת משתמש חדש</button>
+
+        <button class="btn" id="btnReset" onclick="resetEmailPass()" style="width:100%; margin-top:10px; background: rgba(255,255,255,.10); border:1px solid rgba(170,205,255,.35);">איפוס סיסמה למייל</button>
+
+        <div class="login-hint" id="loginHint" style="margin-top:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+<main class="layout hidden" id="app">
+    <section class="card">
+      <div class="card-hd"><h2 class="title">💰 ניהול הכנסות</h2><div class="status-box balance-box" id="balanceBox">יתרה: <span id="netBalanceDisplay">0</span> ₪</div></div>
+      <div class="entry" id="entry1">
+        <div class="datewrap" onclick="openDP('date1', this)">
+          <input class="date-input" type="text" id="date1" readonly placeholder="בחר תאריך">
+          <div class="cal-btn">📅</div>
+        </div>
+        <input class="input" type="text" id="desc1" placeholder="תיאור" />
+        <input class="input" type="number" id="amount1" placeholder="סכום" />
+        <div class="type-chip" id="chip1">
+          <select class="select" id="type1">
+            <option value="income">הכנסה</option>
+            <option value="expense">הוצאה</option>
+          </select>
+        </div>
+        <button class="btn add-icon" id="btnAdd1" type="button" title="הוסף">➕</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>תאריך</th><th>תיאור</th><th>סכום</th><th></th></tr></thead>
+          <tbody id="tableBody1"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-hd"><h2 class="title">📊 ניהול מעשר</h2><div class="status-duo">
+  <div class="status-stack hidden">
+    <div class="status-note">חישוב לפי יתרת ניהול הכנסות</div>
+    <div class="status-box status-maaser" id="statusBoxA"><span id="statusA">עודף למעשר 0 ₪</span></div>
+  </div>
+  <div class="status-stack">
+    <div class="status-note">החישוב מכלל התקציב ולא מחודש ושנה המופיעים למעלה</div>
+    <div class="status-box status-maaser" id="statusBoxAAll"><span id="statusAAll">עודף למעשר 0 ₪</span></div>
+  </div>
+</div></div>
+      <div class="entry" id="entry2">
+        <div class="datewrap" onclick="openDP('date2', this)">
+          <input class="date-input" type="text" id="date2" readonly placeholder="בחר תאריך">
+          <div class="cal-btn">📅</div>
+        </div>
+        <input class="input" type="text" id="desc2" placeholder="תיאור" />
+        <input class="input" type="number" id="amount2" placeholder="סכום" />
+        <div class="type-chip" id="chip2">
+          <select class="select" id="type2">
+            <option value="cat1">מעשר</option>
+          </select>
+        </div>
+        <button class="btn add-icon" id="btnAdd2" type="button" title="הוסף">➕</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>תאריך</th><th>תיאור</th><th>סוג</th><th>סכום</th><th></th></tr></thead>
+          <tbody id="tableBody2"></tbody>
+        </table>
+      </div>
+    </section>
+
+
+    <section class="card">
+      <div class="card-hd"><h2 class="title">📊 ניהול חומש</h2><div class="status-duo">
+  <div class="status-stack hidden">
+    <div class="status-note">חישוב לפי יתרת ניהול הכנסות</div>
+    <div class="status-box status-maaser" id="statusBoxB"><span id="statusB">עודף לחומש 0 ₪</span></div>
+  </div>
+  <div class="status-stack">
+    <div class="status-note">החישוב מכלל התקציב ולא מחודש ושנה המופיעים למעלה</div>
+    <div class="status-box status-maaser" id="statusBoxBAll"><span id="statusBAll">עודף לחומש 0 ₪</span></div>
+  </div>
+</div></div>
+      <div class="entry" id="entry3">
+        <div class="datewrap" onclick="openDP('date3', this)">
+          <input class="date-input" type="text" id="date3" readonly placeholder="בחר תאריך">
+          <div class="cal-btn">📅</div>
+        </div>
+        <input class="input" type="text" id="desc3" placeholder="תיאור" />
+        <input class="input" type="number" id="amount3" placeholder="סכום" />
+        <div class="type-chip" id="chip3">
+          <select class="select" id="type3">
+            <option value="cat2">חומש</option>
+          </select>
+        </div>
+        <button class="btn add-icon" id="btnAdd3" type="button" title="הוסף">➕</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>תאריך</th><th>תיאור</th><th>סוג</th><th>סכום</th><th></th></tr></thead>
+          <tbody id="tableBody3"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+    <div class="sysbar hidden" id="sysbar">
+    <div class="sys-right hidden" style="display:none;">
+      <span id="lblA" class="hidden">חוב:</span><span id="remA" class="hidden">0 ₪</span>
+      <div id="barCat1" class="hidden"></div>
+    </div>
+
+    <div class="sys-center">
+      <div class="btn-row">
+        <button class="btn gray" id="btnFixed"><svg class="ico-cycle" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 0 1 12.8-5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 3.7v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.5 12a7.5 7.5 0 0 1-12.8 5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> מחזורית</button>
+
+        <div class="excel-wrap">
+           <button class="btn" id="btnExcelMenu">📊 אקסל</button>
+           <div class="excel-menu" id="excelMenu">
+             <div class="excel-item" id="btnExportAction">📤 יצוא CSV</div>
+             <div class="excel-item" id="btnImportAction">📥 יבוא CSV</div>
+           </div>
+        </div>
+        <input type="file" id="excelInput" accept=".csv,text/csv" class="hidden" />
+        <button class="btn gray" id="btnRestore">🔁 שחזור</button>
+        <input type="file" id="fileInput" accept=".json" class="hidden" />
+        <button class="btn gray" id="btnPass">🔑 סיסמה</button>
+        <button class="btn danger" id="btnReset">🗑️ איפוס</button>
+      </div>
+    </div>
+  </div>
+
+<div class="overlay" id="overlay"></div>
+  <div class="modal" id="fixedModal">
+    <h3 style="text-align:center; margin-top:0; color:var(--accent);">ניהול מחזורית מתוזמן</h3>
+    <div class="section"><h4 style="color:var(--good); margin:0 0 10px;">💰 הכנסות קבועות</h4><div id="inc-list"></div><button class="btn good" id="addInc" style="margin-top:6px; width:100%;">➕ הוסף</button></div>
+    <div class="section"><h4 style="color:var(--bad); margin:0 0 10px;">📉 הוצאות קבועות</h4><div id="exp-list"></div><button class="btn danger" id="addExp" style="margin-top:6px; width:100%;">➕ הוסף</button></div>
+    <div class="section"><h4 style="color:var(--accent); margin:0 0 10px;">מעשר קבוע</h4><div id="cat1-list"></div><button class="btn" id="addCat1" style="margin-top:6px; width:100%;">➕ הוסף</button></div>
+    <div class="section"><h4 style="color:var(--bad); margin:0 0 10px;">חומש קבוע</h4><div id="cat2-list"></div><button class="btn danger" id="addCat2" style="margin-top:6px; width:100%;">➕ הוסף</button></div>
+    
+    <div class="section">
+      <h4 style="color:var(--purple); margin:0 0 10px;">🏦 משכנתא מתוזמנת (קרן+ריבית)</h4>
+      <div id="mort-list"></div>
+      <button class="btn purple" id="addMort" style="margin-top:6px; width:100%;">➕ הוסף</button>
+    </div>
+</div>
+
+    <button class="btn gray" id="closeFixed" style="width:100%; justify-content:center; margin-top:10px;">סיום וסגירה</button>
+  </div>
+
+  <div class="modal" id="notifToast" style="width:300px; text-align:center;">
+    <p id="notifText" style="margin-bottom:15px; font-size:14px; line-height:1.4;"></p>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button class="btn good" id="notifOk">בוצע</button>
+      <button class="btn gray" id="notifSkip">דלג</button>
+    </div>
+  </div>
+
+  <div class="modal" id="backupToast" style="width:300px; text-align:center; border-color:var(--purple);">
+    <p style="margin-bottom:15px;"><b style="color:var(--purple);">🛡️ הגיע זמן גיבוי</b><br/>עבר שבוע (7 ימים) מהגיבוי האחרון.</p>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button class="btn purple" id="backupNow">גבה עכשיו</button>
+      <button class="btn gray" id="backupClose">סגור</button>
+    </div>
+  </div>
+
+<!-- Firebase (Auth + Firestore) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+<script>
+/* =========== HELPER =========== */
+const $ = (id)=>document.getElementById(id);
+const on = (id, evt, fn) => { const el=$(id); if(el) el.addEventListener(evt, fn); };
+const onClick = (id, fn) => on(id, 'click', fn);
+
+
+/* =========== BACKUP FOLDER (USB / DiskOnKey) =========== */
+/*
+  חשוב לדעת:
+  בדפדפן אי אפשר "לזהות" אוטומטית דיסק-און-קי או לבחור תיקיה בלי אישור משתמש (מגבלות אבטחה).
+  מה שכן אפשר (ב-Chrome/Edge): לבחור פעם אחת תיקיית גיבוי (למשל תקיית "גיבוי" על האונקי),
+  ואז המערכת תשמור לשם כברירת מחדל, וגם תנסה לבצע גיבוי לשם בסגירת הדפדפן.
+*/
+
+const _FS_DB = 'vLux_fs_handles';
+const _FS_STORE = 'kv';
+
+function _idbOpen(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(_FS_DB, 1);
+    req.onupgradeneeded = ()=> req.result.createObjectStore(_FS_STORE);
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+async function _idbGet(key){
+  try{
+    const db = await _idbOpen();
+    return await new Promise((resolve, reject)=>{
+      const tx = db.transaction(_FS_STORE,'readonly');
+      const st = tx.objectStore(_FS_STORE);
+      const rq = st.get(key);
+      rq.onsuccess = ()=> resolve(rq.result || null);
+      rq.onerror = ()=> reject(rq.error);
+      tx.oncomplete = ()=> db.close();
+    });
+  }catch(e){ return null; }
+}
+async function _idbSet(key, val){
+  const db = await _idbOpen();
+  return await new Promise((resolve, reject)=>{
+    const tx = db.transaction(_FS_STORE,'readwrite');
+    tx.objectStore(_FS_STORE).put(val, key);
+    tx.oncomplete = ()=> { db.close(); resolve(true); };
+    tx.onerror = ()=> { const er = tx.error || new Error('IDB error'); db.close(); reject(er); };
+  });
+}
+async function _idbDel(key){
+  const db = await _idbOpen();
+  return await new Promise((resolve, reject)=>{
+    const tx = db.transaction(_FS_STORE,'readwrite');
+    tx.objectStore(_FS_STORE).delete(key);
+    tx.oncomplete = ()=> { db.close(); resolve(true); };
+    tx.onerror = ()=> { const er = tx.error || new Error('IDB error'); db.close(); reject(er); };
+  });
+}
+
+let backupDirHandle = null;
+
+// טוען את התיקיה השמורה (אם קיימת)
+(async ()=>{
+  backupDirHandle = await _idbGet('backupDirHandle');
+})();
+
+async function chooseBackupFolder(){
+  if(!window.showDirectoryPicker){
+    alert("בדפדפן הזה אין תמיכה בבחירת תיקיה קבועה. מומלץ להשתמש ב-Chrome או Edge.");
+    return false;
+  }
+  try{
+    const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+    backupDirHandle = dir;
+    await _idbSet('backupDirHandle', dir);
+    alert("תיקיית הגיבוי נשמרה כברירת מחדל ✅");
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+async function clearBackupFolder(){
+  backupDirHandle = null;
+  try{ await _idbDel('backupDirHandle'); }catch(e){}
+  alert("בחירת תיקיית גיבוי בוטלה.");
+}
+
+async function _ensureDirRWPermission(dirHandle){
+  try{
+    const opts = { mode: 'readwrite' };
+    let p = await dirHandle.queryPermission(opts);
+    if(p === 'granted') return true;
+    p = await dirHandle.requestPermission(opts);
+    return p === 'granted';
+  }catch(e){
+    return false;
+  }
+}
+
+async function _writeBlobToDir(dirHandle, filename, blob){
+  const fh = await dirHandle.getFileHandle(filename, { create: true });
+  const writable = await fh.createWritable();
+  await writable.write(blob);
+  await writable.close();
+}
+
+/* =========== FILE SAVE (Choose location + date filename) =========== */
+function _todayForName(){
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yy = String(d.getFullYear()).slice(-2);
+  // שים לב: במערכות הפעלה רבות (Windows) אסור / בשם קובץ, לכן משתמשים במקף
+  return `${dd}-${mm}-${yy}`;
+}
+
+async function saveBlobSmart(blob, suggestedName, mime, pickerTypes){
+  // 1) אם המשתמש בחר תיקיית גיבוי קבועה (למשל על דיסק-און-קי) – ננסה לשמור לשם בלי לשאול שוב
+  try{
+    if(backupDirHandle && window.showDirectoryPicker){
+      const okPerm = await _ensureDirRWPermission(backupDirHandle);
+      if(okPerm){
+        await _writeBlobToDir(backupDirHandle, suggestedName, blob);
+        return true;
+      }
+    }
+  }catch(e){
+    // אם האונקי נותק / אין הרשאה / תקלה – נמשיך ל-fallback
+  }
+
+  // 2) File System Access API (Chrome/Edge) – מאפשר לבחור מיקום ושם קובץ
+  try{
+    if(window.showSaveFilePicker){
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: pickerTypes || [{
+          description: 'File',
+          accept: { [mime||'application/octet-stream'] : ['.' + (suggestedName.split('.').pop() || 'dat')] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    }
+  }catch(err){
+    // המשתמש ביטל/ה או שאין הרשאה – נמשיך ל-fallback
+  }
+
+  // 3) Fallback – הורדה רגילה (גם כאן לרוב ניתן לבחור מיקום בחלון ההורדה של הדפדפן)
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = suggestedName;
+  a.click();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 2500);
+  return true;
+}
+/* =========== EXIT MESSAGE =========== */
+window.onbeforeunload = function() {
+    return "מומלץ על לחיצה על כפתור שמירה לפני יציאה";
+};
+
+// ניסיון לגיבוי אוטומטי בסגירה/רענון אם בוצע שינוי מאז הגיבוי האחרון
+let _autoBackupFired = false;
+async function _tryAutoBackup(){
+  if(_autoBackupFired) return;
+  if(!backupDirty) return; // אין שינוי מאז גיבוי אחרון
+  _autoBackupFired = true;
+
+  // תמיד לשמור גיבוי פנימי (לא תלוי בהורדה)
+  storeInternalAutoBackup();
+
+  // ניסיון לייצוא קובץ (בדפדפנים מסוימים פעולה זו עלולה להיחסם בזמן סגירה)
+  try{
+    await exportBackupFile(true);
+  }catch(e){
+    // אם נחסם – עדיין נשאר גיבוי פנימי ב-localStorage
+  }
+}
+
+// pagehide/visibilitychange נתפסים טוב יותר מסגירה מאשר unload רגיל
+window.addEventListener('pagehide', ()=>{ _tryAutoBackup(); });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden') _tryAutoBackup();
+});
+
+/* =========== DATA & CONFIG =========== */
+let data1 = JSON.parse(localStorage.getItem('vLux_1')) || [];
+let data2 = JSON.parse(localStorage.getItem('vLux_2')) || [];
+let data3 = JSON.parse(localStorage.getItem('vLux_3')) || [];
+let fixedSettings = JSON.parse(localStorage.getItem('vLux_fixed_v7')) || { inc: [], exp: [], cat1: [], cat2: [], mort: [] };
+let confirmedLogs = JSON.parse(localStorage.getItem('vLux_confirmed')) || [];
+let config = JSON.parse(localStorage.getItem('vLux_config')) || { firstEntry: null, lastBackupCycle: 0 };
+let savedPass = localStorage.getItem('vLux_pass') || "";
+
+/* =========== FIREBASE CLOUD (Email/Password) =========== */
+/*
+  1) צור פרויקט ב-Firebase Console
+  2) Authentication -> Sign-in method: הפעל Email/Password
+  3) Firestore Database: צור (Start in production/test)
+  4) הדבק כאן את firebaseConfig (Project settings -> Your apps -> Web app)
+*/
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCZNCA75Ygp2rMYidMUmT8t_mlxc0-qMrM",
+  authDomain: "bhvu-d0c64.firebaseapp.com",
+  projectId: "bhvu-d0c64",
+  storageBucket: "bhvu-d0c64.firebasestorage.app",
+  messagingSenderId: "508330629632",
+  appId: "1:508330629632:web:8121f418ed05eddcbf56e5",
+  measurementId: "G-QP31L3FRJT"
+};
+
+let _fbInited = false;
+
+function fbInitOnce(){
+  if(_fbInited) return;
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    _fbInited = true;
+  }catch(e){
+    // אם כבר אותחל
+    _fbInited = true;
+  }
+}
+
+function fbUser(){
+  try{ return firebase.auth().currentUser; }catch(e){ return null; }
+}
+
+function fbDocRef(){
+  const u = fbUser();
+  if(!u) return null;
+  // מסמך מצב אחד לכל משתמש
+  return firebase.firestore().collection('users').doc(u.uid).collection('apps').doc('main');
+}
+
+async function cloudLoad(){
+  const ref = fbDocRef();
+  if(!ref) return null;
+  const snap = await ref.get();
+  return snap.exists ? snap.data() : null;
+}
+
+async function cloudSave(state){
+  const ref = fbDocRef();
+  if(!ref) return;
+  await ref.set(state, { merge: true });
+}
+
+async function startAppAfterAuth(){
+  // UI פתיחה
+  $('lock')?.classList.add('hidden');
+  $('app')?.classList.remove('hidden');
+  $('sysbar')?.classList.remove('hidden');
+  $('topbar')?.classList.remove('hidden');
+
+  initMasterFilters();
+  setupEnterKeys();
+
+  // טען ענן (אם קיים) ושפוך למבנים
+  try{
+    const cloud = await cloudLoad();
+    if(cloud){
+      data1 = Array.isArray(cloud.data1) ? cloud.data1 : data1;
+      data2 = Array.isArray(cloud.data2) ? cloud.data2 : data2;
+      data3 = Array.isArray(cloud.data3) ? cloud.data3 : data3;
+
+      fixedSettings = cloud.fixedSettings || fixedSettings;
+      confirmedLogs = Array.isArray(cloud.confirmedLogs) ? cloud.confirmedLogs : confirmedLogs;
+      config = cloud.config || config;
+
+      ensureSorted(data1); ensureSorted(data2); ensureSorted(data3);
+    }
+  }catch(e){
+    console.error(e);
+    $('loginHint') && ($('loginHint').textContent = "אזהרה: לא הצלחתי לטעון נתונים מהענן.");
+  }
+
+  updateUI();
+  checkAllScheduled();
+  checkBackupTimer();
+}
+
+async function registerEmailPass(){
+  fbInitOnce();
+  const email = ( $('emailInput')?.value || '' ).trim();
+  const pass  = ( $('passInput')?.value || '' ).trim();
+  if(!email || !pass){
+    $('loginHint') && ($('loginHint').textContent = "נא למלא דוא״ל וסיסמה.");
+    return;
+  }
+  $('loginHint') && ($('loginHint').textContent = "יוצר משתמש...");
+  try{
+    await firebase.auth().createUserWithEmailAndPassword(email, pass);
+    $('loginHint') && ($('loginHint').textContent = "נוצר משתמש ✅ נכנסת בהצלחה.");
+    await startAppAfterAuth();
+  }catch(e){
+    console.error(e);
+    $('loginHint') && ($('loginHint').textContent = "שגיאה ביצירת משתמש: " + (e?.message || e));
+  }
+}
+
+async function resetEmailPass(){
+  fbInitOnce();
+  const email = ( $('emailInput')?.value || '' ).trim();
+  if(!email){
+    $('loginHint') && ($('loginHint').textContent = "כתוב דוא״ל ואז לחץ איפוס.");
+    return;
+  }
+  $('loginHint') && ($('loginHint').textContent = "שולח מייל איפוס...");
+  try{
+    await firebase.auth().sendPasswordResetEmail(email);
+    $('loginHint') && ($('loginHint').textContent = "נשלח מייל איפוס ✅ בדוק בתיבה.");
+  }catch(e){
+    console.error(e);
+    $('loginHint') && ($('loginHint').textContent = "שגיאה באיפוס: " + (e?.message || e));
+  }
+}
+
+/* במקום סיסמה מקומית - כניסה עם Email/Password */
+async function checkPasswordSafe(){
+  fbInitOnce();
+  const email = ( $('emailInput')?.value || '' ).trim();
+  const pass  = ( $('passInput')?.value || '' ).trim();
+  if(!email || !pass){
+    $('loginHint') && ($('loginHint').textContent = "נא למלא דוא״ל וסיסמה.");
+    return;
+  }
+  $('loginHint') && ($('loginHint').textContent = "מתחבר...");
+  try{
+    await firebase.auth().signInWithEmailAndPassword(email, pass);
+    $('loginHint') && ($('loginHint').textContent = "נכנסת ✅");
+    await startAppAfterAuth();
+  }catch(e){
+    console.error(e);
+    $('loginHint') && ($('loginHint').textContent = "שגיאת כניסה: " + (e?.message || e));
+  }
+}
+
+
+
+
+/* ===== ORDERING: show rows old→new + insert by date ===== */
+function _cmpByDateAsc(a,b){
+  const ad = a?.date || '';
+  const bd = b?.date || '';
+  if(ad < bd) return -1;
+  if(ad > bd) return 1;
+  const ai = (a && (a._ins ?? a.id)) || 0;
+  const bi = (b && (b._ins ?? b.id)) || 0;
+  return ai < bi ? -1 : (ai > bi ? 1 : 0);
+}
+function ensureSorted(arr){
+  if(!Array.isArray(arr)) return;
+  // Backward-compat: make sure each item has _ins for stable ordering on same date
+  arr.forEach(it=>{ if(it && it._ins == null) it._ins = it.id ?? Date.now(); });
+  arr.sort(_cmpByDateAsc);
+}
+function insertSorted(arr, item){
+  if(!Array.isArray(arr)) return;
+  if(item && item._ins == null) item._ins = item.id ?? Date.now();
+  // If not sorted yet, sort once
+  if(arr.length > 1){
+    // quick check (ascending)
+    for(let i=1;i<Math.min(arr.length,8);i++){
+      if(_cmpByDateAsc(arr[i-1], arr[i]) > 0){ ensureSorted(arr); break; }
+    }
+  }
+  let lo=0, hi=arr.length;
+  while(lo < hi){
+    const mid = (lo + hi) >> 1;
+    if(_cmpByDateAsc(arr[mid], item) <= 0) lo = mid + 1;
+    else hi = mid;
+  }
+  arr.splice(lo, 0, item);
+}
+// Normalize existing stored arrays once on load
+ensureSorted(data1); ensureSorted(data2); ensureSorted(data3);
+
+
+/* =========== CHANGE TRACKING (Auto-backup-on-close) =========== */
+// שים לב: "שמירה" (💾) שומרת ל-localStorage. כאן אנחנו עוקבים אם בוצע שינוי מאז הגיבוי האחרון (🛡️).
+let backupDirty = (localStorage.getItem('vLux_backupDirty') === '1');
+
+// סימון שבוצע שינוי/הוספה במערכת (מאז הגיבוי האחרון)
+function markBackupDirty(){
+  backupDirty = true;
+  localStorage.setItem('vLux_backupDirty','1');
+}
+
+// איפוס "מלוכלך" אחרי גיבוי מוצלח
+function clearBackupDirty(){
+  backupDirty = false;
+  localStorage.removeItem('vLux_backupDirty');
+}
+
+// תמיד נשמור גם "גיבוי פנימי" אחרון בתוך הדפדפן (למקרה שהדפדפן חסם הורדה בסגירה)
+function storeInternalAutoBackup(){
+  try{
+    const payload = {budget:data1, maaser:data2, chomesh:data3, settings:fixedSettings, config, ts:new Date().toISOString()};
+    localStorage.setItem('vLux_autoBackup_latest', JSON.stringify(payload));
+  }catch(e){}
+}
+
+// ניסיון להוציא גיבוי לקובץ. בסגירת דפדפן ייתכן שחלק מהדפדפנים יחסמו הורדה אוטומטית, לכן יש גם גיבוי פנימי.
+async function exportBackupFile(isAuto=false){
+  const blob = new Blob([JSON.stringify({budget:data1, maaser:data2, chomesh:data3, settings:fixedSettings, config})], {type:"application/json"});
+  const stamp = _todayForName();
+  const filename = `${isAuto ? 'גיבוי אוטומטי' : 'גיבוי'} ${stamp}.json`;
+
+  await saveBlobSmart(blob, filename, 'application/json', [{
+    description: 'JSON',
+    accept: { 'application/json': ['.json'] }
+  }]);
+  clearBackupDirty();
+  localStorage.setItem('vLux_lastBackupAt', new Date().toISOString());
+}
+
+/* AUTH UI */
+function showSetup(){
+  $('loginPanel')?.classList.add('hidden');
+  $('setupPanel')?.classList.remove('hidden');
+  $('loginHint') && ($('loginHint').textContent = "");
+  setTimeout(()=> $('passNew')?.focus(), 50);
+}
+function showLogin(){
+  $('setupPanel')?.classList.add('hidden');
+  $('loginPanel')?.classList.remove('hidden');
+  $('loginHint') && ($('loginHint').textContent = "");
+  setTimeout(()=> $('passInput')?.focus(), 50);
+}
+function initAuthUI(){
+  // כניסה רק דרך Firebase (דוא״ל/סיסמה)
+  try{ $('setupPanel')?.classList.add('hidden'); }catch(e){}
+  showLogin();
+  setTimeout(()=> $('emailInput')?.focus?.(), 50);
+  // נאתחל Firebase כבר כאן כדי להציג שגיאות מוקדם
+  try{ fbInitOnce(); }catch(e){}
+}
+
+function setInitialPassword(){
+  const p1 = (($('passNew').value || '').trim());
+  const p2 = (($('passNew2').value || '').trim());
+  if(!p1 || p1.length < 4){
+    alert("בחר סיסמה של לפחות 4 תווים");
+    $('passNew').focus();
+    return;
+  }
+  if(p1 !== p2){
+    alert("האימות לא תואם");
+    $('passNew2').focus();
+    return;
+  }
+  savedPass = p1;
+  localStorage.setItem('vLux_pass', p1);
+  showLogin();
+  $('passInput').value = "";
+  $('loginHint') && ($('loginHint').textContent = "הסיסמה נשמרה. כעת אפשר להיכנס.");
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  // ברירת מחדל לתאריכים בהזנה ידנית: היום
+  const _todayIso = new Date().toISOString().split('T')[0];
+  ['date1','date2','date3'].forEach(_id=>{
+    const _el = $( _id );
+    if(_el && !_el.value) _el.value = _todayIso;
+  });
+
+  setDefaultDates();
+  // init auth panels
+  initAuthUI();
+
+  // setup handlers
+  const bs = $('btnSetup');
+  if(bs) bs.addEventListener('click', setInitialPassword);
+
+  $('passNew')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') setInitialPassword(); });
+  $('passNew2')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') setInitialPassword(); });
+});
+
+
+const months = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+
+/* PAGINATION */
+let limit1 = 100, limit2 = 100, limit3 = 100;
+function loadMore1(){ limit1+=100; updateUI(); }
+function loadMore2(){ limit2+=100; updateUI(); }
+function loadMore3(){ limit3+=100; updateUI(); }
+
+/* LOGIN & INIT */
+function checkPasswordSafe(){
+  if(!savedPass){
+    showSetup();
+    return;
+  }
+  const v = (($('passInput').value || '').trim());
+  if(v === savedPass){
+    $('lock').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    $('sysbar').classList.remove('hidden');
+    $('topbar').classList.remove('hidden');
+    initMasterFilters();
+    setupEnterKeys();
+    updateUI();
+    checkAllScheduled();
+    checkBackupTimer();
+  } else {
+    const h = $('loginHint');
+    if(h) h.textContent = "סיסמה שגויה, נסה שוב.";
+    $('passInput').focus();
+    $('passInput').select?.();
+  }
+}
+
+$('passInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') checkPasswordSafe(); });
+
+/* ENTER KEY SETUP */
+function setupEnterKeys() {
+  // Side 1
+  $('desc1').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); $('amount1').focus(); }});
+  $('amount1').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); addRow(1); }});
+  // If user is focused on the type select and presses Enter, add row (instead of reopening the native dropdown)
+  $('type1').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      e.stopPropagation();
+      addRow(1);
+    }
+  });
+
+  // Side 2
+  $('desc2').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); $('amount2').focus(); }});
+  $('amount2').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); addRow(2); }});
+  $('type2').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      e.stopPropagation();
+      addRow(2);
+    }
+  });
+
+  // Side 3
+  $('desc3')?.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); $('amount3').focus(); }});
+  $('amount3')?.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); addRow(3); }});
+  $('type3')?.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      e.stopPropagation();
+      addRow(3);
+    }
+  });
+}
+
+/* FILTERS */
+function initMasterFilters(){
+  const now = new Date();
+  const mf = $('monthFilterMaster'); mf.innerHTML = '';
+  mf.add(new Option("הכל","all"));
+  months.forEach((m,idx)=>mf.add(new Option(m, idx+1)));
+  mf.value = now.getMonth()+1;
+
+  const yf = $('yearFilterMaster'); yf.innerHTML = '';
+  yf.add(new Option("הכל","all"));
+  for(let y = now.getFullYear()-1; y <= Math.max(now.getFullYear()+1, 2036); y++){
+    yf.add(new Option(y,y));
+  }
+  yf.value = now.getFullYear();
+
+  // highlight selected month/year like "pill" (e.g., פברואר + 2026)
+  setTimeout(()=>updateSelectBadges(), 0);
+
+
+  ['searchTermMaster','searchAmountMaster','searchStartMaster','searchEndMaster','monthFilterMaster','yearFilterMaster'].forEach(id=>{
+    const el = $(id); if(el) el.addEventListener(el.tagName==='SELECT'?'change':'input', ()=>{ updateSelectBadges(); updateUI(); });
+  });
+  if($('clearSearchMaster')) $('clearSearchMaster').onclick = clearSearchMaster;
+}
+function clearSearchMaster(){
+  $('searchTermMaster').value = ''; $('searchAmountMaster').value = '';
+  $('searchStartMaster').value = ''; $('searchEndMaster').value = ''; updateUI();
+}
+
+function updateSelectBadges(){
+  // Month/Year filters: when not "הכל" mark in red
+  const mf = $('monthFilterMaster');
+  const yf = $('yearFilterMaster');
+  if(mf) mf.classList.toggle('hot-select', mf.value !== 'all');
+  if(yf) yf.classList.toggle('hot-select', yf.value !== 'all');
+
+  // Income/Expense dropdown: always readable + red highlight (as requested)
+  const t1 = $('type1');
+  if(t1) t1.classList.add('hot-select');
+}
+
+/* ADD / EDIT / DELETE */
+onClick('btnAdd1', ()=>addRow(1));
+onClick('btnAdd2', ()=>addRow(2));
+onClick('btnAdd3', ()=>addRow(3));
+
+function addRow(s, importedDate = null){
+  markBackupDirty();
+  const amtInput = $(`amount${s}`);
+  const descInput = $(`desc${s}`);
+  const amt = parseFloat(amtInput.value);
+  const desc = descInput.value;
+
+  if(isNaN(amt)) return;
+
+  if(!config.firstEntry){ 
+    config.firstEntry = new Date().toISOString(); 
+    localStorage.setItem('vLux_config', JSON.stringify(config)); 
+  }
+
+  let finalDate, finalDisplay;
+
+  if (importedDate) {
+    // אם הגיע תאריך מהאקסל (אובייקט עם iso ו-display)
+    finalDate = importedDate.iso;
+    finalDisplay = importedDate.display;
+  } else {
+    // הזנה ידנית - משתמש בתאריך שנבחר (ברירת מחדל: היום)
+    const dEl = $(`date${s}`);
+    const chosenIso = (dEl && dEl.value) ? dEl.value : new Date().toISOString().split('T')[0];
+    finalDate = chosenIso;
+    finalDisplay = isoToDisplay(chosenIso);
+  }
+
+  const item = { 
+    id: Date.now() + Math.random(), 
+    date: finalDate, 
+    displayDate: finalDisplay, 
+    desc: desc||"-", 
+    amount: amt, 
+    type: $(`type${s}`).value 
+  };
+
+  const arr = (s===1) ? data1 : (s===2 ? data2 : data3);
+  insertSorted(arr, item);
+
+  // רק אם זו הזנה ידנית, נבצע שמירה ואיפוס שדות מיידי
+  if (!importedDate) {
+    save();
+    updateUI();
+    amtInput.value = '';
+    descInput.value = '';
+    // אחרי הזנת פעולה (גם אם בחרת תאריך ישן), החזר את שדה התאריך לברירת מחדל: היום
+    const dEl2 = $(`date${s}`);
+    if(dEl2) dEl2.value = new Date().toISOString().split('T')[0];
+    descInput.focus();
+  }
+}
+function editRow(s,id){
+  markBackupDirty();
+  const arr = (s===1) ? data1 : (s===2 ? data2 : data3);
+  const item = arr.find(i=>i.id===id);
+  if(!item) return;
+
+  // תאריך (אפשר לכתוב dd/mm/yyyy או d/m/yy או yyyy-mm-dd)
+  const curDisp = item.displayDate || isoToDisplay(item.date) || "";
+  const nDateDisp = prompt("ערוך תאריך (dd/mm/yyyy או yyyy-mm-dd):", curDisp);
+  if(nDateDisp === null) return;
+
+  const nIso = displayToIso(nDateDisp);
+  if(!nIso){
+    alert("תאריך לא תקין. לדוגמה: 09/02/2026 או 9/2/26 או 2026-02-09");
+    return;
+  }
+
+  const nD = prompt("ערוך תיאור:", item.desc);
+  if(nD === null) return;
+
+  const nA = prompt("ערוך סכום:", item.amount);
+  if(nA === null || isNaN(parseFloat(nA))) return;
+
+  // בחירת סוג בצורה נורמלית (מילים), לא מספרים
+  const norm = (v)=> (v||"").toString().trim().toLowerCase();
+  let newType = item.type;
+
+  if(s === 1){
+    const curLabel = (item.type === "income") ? "הכנסה" : "הוצאה";
+    const tIn = prompt("סוג (הכנסה/הוצאה):", curLabel);
+    if(tIn === null) return;
+    const t = norm(tIn);
+
+    if(["הכנסה","income","inc","in","+"].includes(t)){
+      newType = "income";
+    }else if(["הוצאה","expense","exp","out","-"].includes(t)){
+      newType = "expense";
+    }else{
+      alert("סוג לא תקין. כתוב/י: הכנסה או הוצאה");
+      return;
+    }
+  }else{
+    const curLabel = (item.type === "cat1") ? "מעשר" : "חומש";
+    const tIn = prompt("סוג (מעשר/חומש):", curLabel);
+    if(tIn === null) return;
+    const t = norm(tIn);
+
+    if(["מעשר","maaser","aser","cat1"].includes(t)){
+      newType = "cat1";
+    }else if(["חומש","homesh","chomesh","hamesh","cat2"].includes(t)){
+      newType = "cat2";
+    }else{
+      alert("סוג לא תקין. כתוב/י: מעשר או חומש");
+      return;
+    }
+  }
+
+  // עדכון הערכים
+  item.date = nIso;
+  item.displayDate = isoToDisplay(nIso);
+  item.desc = nD;
+  item.amount = parseFloat(nA);
+  item.type = newType;
+
+  // שמירה על סדר כרונולוגי: להוציא ולהכניס מחדש במקום הנכון
+  const idx = arr.findIndex(i=>i.id===id);
+  if(idx >= 0) arr.splice(idx, 1);
+
+  // אם שינינו בין מעשר↔חומש – נעביר בין המערכים
+  if(s !== 1 && newType !== ((s===2) ? "cat1" : "cat2")){
+    const targetArr = (newType === "cat1") ? data2 : data3;
+    insertSorted(targetArr, item);
+  }else{
+    insertSorted(arr, item);
+  }
+
+  save();
+  updateUI();
+}
+
+function deleteRow(s,id){
+  markBackupDirty();
+  if(!confirm("למחוק?")) return;
+  if(s===1) data1 = data1.filter(i=>i.id!==id);
+  else if(s===2) data2 = data2.filter(i=>i.id!==id);
+  else data3 = data3.filter(i=>i.id!==id);
+  save(); updateUI();
+}
+
+/* UI RENDER */
+function updateUI(){
+  const m = $('monthFilterMaster').value, y = $('yearFilterMaster').value, term = ($('searchTermMaster').value||'').toLowerCase();
+  const fAmt = parseFloat($('searchAmountMaster').value), start = $('searchStartMaster').value, end = $('searchEndMaster').value;
+
+  let net = 0, sA = 0, sB = 0;
+
+  function filterAndRender(data, limit, bodyId, mode){
+    let rows = '', count = 0, total = 0;
+
+    const dataSorted = [...data].sort(_cmpByDateAsc);
+    dataSorted.forEach(i=>{
+      const d = new Date(i.date);
+      let ok = true;
+      if(m!=='all' && (d.getMonth()+1)!=m) ok=false;
+      if(y!=='all' && d.getFullYear()!=y) ok=false;
+      if(term && !i.desc.toLowerCase().includes(term)) ok=false;
+      if(!isNaN(fAmt) && Math.abs(i.amount-fAmt)>0.1) ok=false;
+      if(start && i.date < start) ok=false; 
+      if(end && i.date > end) ok=false;
+
+      if(ok){
+        total++;
+
+        // aggregates for the top boxes
+        if(mode===1){
+          net += (i.type==='income' ? i.amount : -i.amount);
+        } else if(mode===2){
+          if(i.type==='cat1') sA += i.amount;
+        } else if(mode===3){
+          if(i.type==='cat2') sB += i.amount;
+        }
+
+        if(count < limit){
+          if(mode===1){
+            rows += `<tr>
+              <td>${i.displayDate}</td>
+              <td>${i.desc}</td>
+              <td class="${i.type==='income'?'amt-good':'amt-bad'}">${i.amount.toLocaleString()}</td>
+              <td><div class="actions"><span class="act" onclick="editRow(1,${i.id})">✏️</span><span class="act" onclick="deleteRow(1,${i.id})">✕</span></div></td>
+            </tr>`;
+          } else {
+            const label = (mode===2 ? 'מעשר' : 'חומש');
+            const sideNo = (mode===2 ? 2 : 3);
+            rows += `<tr>
+              <td>${i.displayDate}</td>
+              <td>${i.desc}</td>
+              <td>${label}</td>
+              <td class="amt-good">${i.amount.toLocaleString()}</td>
+              <td><div class="actions"><span class="act" onclick="editRow(${sideNo},${i.id})">✏️</span><span class="act" onclick="deleteRow(${sideNo},${i.id})">✕</span></div></td>
+            </tr>`;
+          }
+          count++;
+        }
+      }
+    });
+
+    $(bodyId).innerHTML = rows;
+
+    if(total > count){
+      const tr = document.createElement('tr');
+      const colspan = (mode===1 ? 4 : 5);
+      const btnFn = (mode===1 ? 'loadMore1()' : (mode===2 ? 'loadMore2()' : 'loadMore3()'));
+      tr.innerHTML = `<td colspan="${colspan}"><button class="btn" style="width:100%" onclick="${btnFn}">הצג עוד...</button></td>`;
+      $(bodyId).appendChild(tr);
+    }
+  }
+
+  filterAndRender(data1, limit1, 'tableBody1', 1);
+  $('netBalanceDisplay').innerText = net.toLocaleString();
+  const bBox = $('balanceBox');
+  if(bBox){
+    const isDebtNet = net < 0;
+    bBox.classList.toggle('box-bad', isDebtNet);
+    bBox.classList.toggle('box-good', !isDebtNet);
+  }
+
+  filterAndRender(data2, limit2, 'tableBody2', 2);
+  filterAndRender(data3, limit3, 'tableBody3', 3);
+
+  // יעד הפרשה: 10% מהיתרה (לפי סינון חודש/שנה/חיפוש)
+  const tar = Math.max(0, net * 0.1);
+
+  // ---- מעשר (cat1) ----
+  const diffA = tar - sA;
+  const isDebtA = diffA > 0;
+  const labelA = isDebtA ? "חוב" : "עודף";
+  const valA = Math.floor(Math.abs(diffA)).toLocaleString();
+  if($('statusA')){
+    const amountClassA = isDebtA ? 'amt-due' : 'amt-surplus';
+    $('statusA').innerHTML = `<span class="label-maaser">${labelA} למעשר </span><span class="${amountClassA}">${valA} ₪</span>`;
+    const boxA = $('statusBoxA');
+    if(boxA){
+      boxA.classList.toggle('box-bad', isDebtA);
+      boxA.classList.toggle('box-good', !isDebtA);
+    }
+  }
+
+  // ---- חומש (cat2, אבל חישוב 10% כמו מעשר) ----
+  const diffB = tar - sB;
+  const isDebtB = diffB > 0;
+  const labelB = isDebtB ? "חוב" : "עודף";
+  const valB = Math.floor(Math.abs(diffB)).toLocaleString();
+  if($('statusB')){
+    const amountClassB = isDebtB ? 'amt-due' : 'amt-surplus';
+    $('statusB').innerHTML = `<span class="label-maaser">${labelB} לחומש </span><span class="${amountClassB}">${valB} ₪</span>`;
+    const boxB = $('statusBoxB');
+    if(boxB){
+      boxB.classList.toggle('box-bad', isDebtB);
+      boxB.classList.toggle('box-good', !isDebtB);
+    }
+  }
+
+  // ===== חישוב נוסף: חוב/עודף לפי כלל התקציב (ללא סינון) =====
+  let netAll = 0, sAAll = 0, sBAll = 0;
+  data1.forEach(i => { netAll += (i.type === 'income' ? i.amount : -i.amount); });
+  data2.forEach(i => { if(i.type === 'cat1') sAAll += i.amount; });
+  data3.forEach(i => { if(i.type === 'cat2') sBAll += i.amount; });
+
+  const tarAll = Math.max(0, netAll * 0.1);
+
+  const diffAllA = tarAll - sAAll;
+  const isDebtAllA = diffAllA > 0;
+  const labelAllA = isDebtAllA ? "חוב" : "עודף";
+  const valAllA = Math.floor(Math.abs(diffAllA)).toLocaleString();
+  if($('statusAAll')){
+    const amountClassAllA = isDebtAllA ? 'amt-due' : 'amt-surplus';
+    $('statusAAll').innerHTML = `<span class="label-maaser">${labelAllA} למעשר </span><span class="${amountClassAllA}">${valAllA} ₪</span>`;
+    const boxAllA = $('statusBoxAAll');
+    if(boxAllA){
+      boxAllA.classList.toggle('box-bad', isDebtAllA);
+      boxAllA.classList.toggle('box-good', !isDebtAllA);
+    }
+  }
+
+  const diffAllB = tarAll - sBAll;
+  const isDebtAllB = diffAllB > 0;
+  const labelAllB = isDebtAllB ? "חוב" : "עודף";
+  const valAllB = Math.floor(Math.abs(diffAllB)).toLocaleString();
+  if($('statusBAll')){
+    const amountClassAllB = isDebtAllB ? 'amt-due' : 'amt-surplus';
+    $('statusBAll').innerHTML = `<span class="label-maaser">${labelAllB} לחומש </span><span class="${amountClassAllB}">${valAllB} ₪</span>`;
+    const boxAllB = $('statusBoxBAll');
+    if(boxAllB){
+      boxAllB.classList.toggle('box-bad', isDebtAllB);
+      boxAllB.classList.toggle('box-good', !isDebtAllB);
+    }
+  }
+}
+
+
+  /* SAVE & IO */
+function save(){
+  localStorage.setItem('vLux_1', JSON.stringify(data1));
+  localStorage.setItem('vLux_2', JSON.stringify(data2));
+  localStorage.setItem('vLux_3', JSON.stringify(data3));
+  localStorage.setItem('vLux_config', JSON.stringify(config));
+
+  // שמירה לענן (לא חוסם UI)
+  try{
+    if(_fbInited && fbUser()){
+      cloudSave({
+        data1, data2, data3,
+        fixedSettings,
+        confirmedLogs,
+        config,
+        updatedAt: new Date().toISOString()
+      }).catch(console.error);
+    }
+  }catch(e){ /* ignore */ }
+}
+window.showToast = function(msg) {
+  const t = document.getElementById('toastMsg');
+  if(!t) return;
+  t.innerText = msg || "נשמר!";
+  t.style.bottom = "85px"; // צף מעל התפריט התחתון
+  t.style.opacity = "1";
+  setTimeout(() => {
+    t.style.bottom = "-50px";
+    t.style.opacity = "0";
+  }, 2500);
+};
+
+onClick('btnSave', ()=> { save(); showToast("הנתונים נשמרו בהצלחה!"); });
+/* EXCEL MENU */
+onClick('btnExcelMenu', (e)=>{
+  e.stopPropagation();
+  const menu = $('excelMenu');
+  menu.classList.toggle('show');
+});
+window.addEventListener('click', (e)=>{
+  if(!e.target.closest('.excel-menu') && !e.target.closest('#btnExcelMenu')) {
+     $('excelMenu').classList.remove('show');
+  }
+});
+
+/* Export */
+onClick('btnExportAction', async ()=>{
+  let csv = "\uFEFFתאריך,תיאור,הכנסה,הוצאה,מעשר,חומש\n";
+  const escapeCsv = (txt) => `"${String(txt).replace(/"/g, '""')}"`;
+
+  [...data1].sort(_cmpByDateAsc).forEach(i=>{ csv += `${i.displayDate},${escapeCsv(i.desc)},${i.type==='income'?i.amount:0},${i.type==='expense'?i.amount:0},0,0\n`; });
+  [...data2].sort(_cmpByDateAsc).forEach(i=>{ csv += `${i.displayDate},${escapeCsv(i.desc)},0,0,${i.type==='cat1'?i.amount:0},0\n`; });
+  [...data3].sort(_cmpByDateAsc).forEach(i=>{ csv += `${i.displayDate},${escapeCsv(i.desc)},0,0,0,${i.type==='cat2'?i.amount:0}\n`; });
+
+  const stamp = _todayForName();
+  const filename = `דוח ${stamp}.csv`;
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  await saveBlobSmart(blob, filename, 'text/csv', [{
+    description: 'CSV',
+    accept: { 'text/csv': ['.csv'] }
+  }]);
+});
+
+/* Import */
+onClick('btnImportAction', ()=>{ $('excelInput').value = ''; $('excelInput').click(); });
+
+$('excelInput').addEventListener('change', (e)=>{
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+     const t = String(r.result||'').replace(/\r/g,'');
+     const rows = t.split('\n').filter(l=>l.trim().length);
+     if(rows.length && (rows[0].includes('תאריך') || rows[0].includes('Date'))) rows.shift();
+
+     const parseImportedDate = (raw) => {
+       raw = (raw||'').toString().trim();
+       if(!raw) return null;
+       // תמיכה במספר סידורי של אקסל
+       if(/^\d+(?:\.\d+)?$/.test(raw)){
+         const n = Number(raw);
+         const base = new Date(Date.UTC(1899, 11, 30));
+         const d = new Date(base.getTime() + Math.round(n)*86400000);
+         return {
+           iso: d.toISOString().split('T')[0],
+           display: `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`
+         };
+       }
+       // תמיכה בפורמט DD/MM/YYYY עם אפשרות לרווחים, מקפים או סלשים
+       const parts = raw.split(/[\/\-\s\.]/);
+       if(parts.length === 3) {
+          let d = parts[0].padStart(2,'0'), m = parts[1].padStart(2,'0'), y = parts[2];
+          if(y.length === 2) y = "20" + y;
+          return { iso: `${y}-${m}-${d}`, display: `${d}/${m}/${y}` };
+       }
+       return null;
+     };
+
+     rows.forEach(row=>{
+       const c = row.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+       if(!c || c.length < 3) return;
+
+       const dateObj = parseImportedDate(c[0]);
+       const desc = c[1] || '-';
+       const inc = parseFloat(c[2])||0; const exp = parseFloat(c[3])||0;
+       const cat1 = parseFloat(c[4])||0;
+       const cat2 = parseFloat(c[5])||0;
+const process = (s, amt, type) => {
+         $(`amount${s}`).value = amt;
+         $(`desc${s}`).value = desc;
+         $(`type${s}`).value = type;
+         addRow(s, dateObj); 
+       };
+
+       if(inc) process(1, inc, 'income');
+       if(exp) process(1, exp, 'expense');
+       if(cat1) process(2, cat1, 'cat1');
+       if(cat2) process(3, cat2, 'cat2');
+     });
+
+     markBackupDirty();
+      save(); updateUI(); alert("הייבוא הושלם בהצלחה!");
+     $('amount1').value = ''; $('desc1').value = '';
+     $('amount2').value = ''; $('desc2').value = '';
+     $('amount3').value = ''; $('desc3').value = '';
+  };
+  r.readAsText(f, 'utf-8');
+});
+
+/* BACKUP / RESTORE */
+onClick('btnBackup', async ()=>{
+  // גיבוי ידני (🛡️) – ייצוא לקובץ
+  storeInternalAutoBackup();
+
+  // אם לא נבחרה תיקיית גיבוי קבועה, נציע לבחור (מומלץ לבחור תקיית "גיבוי" על דיסק-און-קי)
+  if(!backupDirHandle && window.showDirectoryPicker){
+    const want = confirm('רוצה לבחור תיקיית גיבוי קבועה?\n(מומלץ לבחור תקיית "גיבוי" על הדיסק-און-קי, ואז כל גיבוי ירד לשם כברירת מחדל)');
+    if(want){
+      await chooseBackupFolder();
+    }
+  }
+
+  await exportBackupFile(false);
+});
+
+// טיפ: כדי לבטל תיקיית גיבוי קבועה (במידה וצריך) – כתוב בקונסול: clearBackupFolder()
+
+onClick('btnRestore', ()=> $('fileInput').click());
+
+$('fileInput').onchange = (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = (ev)=>{
+    try{
+      const d = JSON.parse(ev.target.result);
+      data1 = d.budget || [];
+      data2 = d.maaser || d.donations || [];
+      data3 = d.chomesh || [];
+      fixedSettings = d.settings || fixedSettings;
+      config = d.config || config;
+      markBackupDirty();
+      save(); location.reload();
+    }catch(e){ alert("שגיאה בקובץ"); }
+  };
+  r.readAsText(f);
+};
+
+/* PASS & RESET */
+onClick('btnPass', ()=>{
+  const c = prompt("סיסמה נוכחית:");
+  if(c===savedPass){
+    const n=prompt("חדשה:");
+    if(n){ savedPass=n; localStorage.setItem('vLux_pass',n); alert("שונה"); }
+  } else if(c) alert("שגיאה");
+});
+onClick('btnReset', ()=>{ if(confirm("למחוק הכל?")){ localStorage.clear(); location.reload(); }});
+
+/* FIXED MODAL */
+onClick('btnFixed', ()=> { $('overlay').style.display='block'; $('fixedModal').style.display='block'; renderFixedList(); });
+const closeModal = ()=> { $('overlay').style.display='none'; $('fixedModal').style.display='none'; };
+onClick('closeFixed', closeModal);
+onClick('overlay', closeModal);
+
+let pendingFixed = {inc:null, exp:null, cat1:null, cat2:null, mort:null};
+
+function renderFixedList(){
+  ['inc','exp','cat1','cat2','mort'].forEach(t=>{
+    const div = $(`${t}-list`);
+    div.innerHTML = '';
+
+    // מיון הפעולות לפי היום בחודש (מהקטן לגדול)
+    if (fixedSettings[t]) {
+      fixedSettings[t].sort((a,b) => (parseInt(a.day ?? a.d ?? 1) - parseInt(b.day ?? b.d ?? 1)));
+    }
+
+    (fixedSettings[t]||[]).forEach((item, idx)=>{
+      const container = document.createElement('div');
+
+      if(t === 'mort'){
+        const modeBoth = (item.mode !== 'int_only') ? 'selected' : '';
+        const modeInt = (item.mode === 'int_only') ? 'selected' : '';
+        container.innerHTML = `<div class="item-summary" onclick="this.nextElementSibling.classList.toggle('active')">
+  <span class="item-title">${item.name || 'משכנתא'}</span>
+  <span class="item-day">יום ${item.d ?? 1} בחודש 🔽</span>
+</div>
+<div class="item-edit mort-row">
+  <div class="mort-row-line" style="grid-template-columns: 1.5fr 2fr; margin-bottom:6px;">
+    <div><label>תיאור/שם</label><input class="input v-name" value="${item.name ?? ''}"></div>
+    <div><label>יתרת הלוואה</label><input class="input v-p" type="number" value="${item.p ?? ''}"></div>
+  </div>
+  <div class="mort-row-line" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom:6px;">
+    <div><label>ריבית %</label><input class="input v-r" type="number" step="0.001" value="${item.r ?? ''}"></div>
+    <div><label>חודשים לסיום</label><input class="input v-n" type="number" value="${item.n ?? ''}"></div>
+    <div><label>יום בחודש</label><input class="input v-d" type="number" value="${item.d ?? ''}"></div>
+  </div>
+  <div class="mort-row-line" style="grid-template-columns: 1fr 1.5fr auto auto;">
+    <div><label>% הלוואה</label><input class="input v-share" type="number" min="1" max="100" value="${item.share ?? 100}"></div>
+    <div><label>רישום בתקציב</label>
+      <select class="input v-mode">
+        <option value="both" ${modeBoth}>קרן (הכנסה) + ריבית (הוצאה)</option>
+        <option value="int_only" ${modeInt}>ריבית בלבד (הוצאה)</option>
+      </select>
+    </div>
+    <button class="btn" title="שמור" onclick="saveFixed('${t}',${idx},this)">💾</button>
+    <button class="btn danger" title="מחק" onclick="removeFixed('${t}',${idx})">🗑️</button>
+  </div>
+</div>`;
+      } else {
+        container.innerHTML = `
+          <div class="item-summary" onclick="this.nextElementSibling.classList.toggle('active')">
+            <span class="item-title">${item.desc || 'ללא תיאור'}</span>
+            <span class="item-day">יום ${item.day ?? 1} בחודש 🔽</span>
+          </div>
+          <div class="item-edit fixed-row">
+            <div><label>תיאור</label><input class="input v-desc" value="${item.desc ?? ''}"></div>
+            <div><label>סכום</label><input class="input v-amt" type="number" value="${item.amt ?? ''}"></div>
+            <div><label>יום בחודש</label><input class="input v-day" type="number" value="${item.day ?? ''}"></div>
+            <button class="btn" title="שמור" onclick="saveFixed('${t}',${idx},this)">💾</button>
+            <button class="btn danger" title="מחק" onclick="removeFixed('${t}',${idx})">🗑️</button>
+          </div>
+        `;
+      }
+      div.appendChild(container);
+    });
+
+    if(pendingFixed[t]){
+      const p = pendingFixed[t];
+      const container = document.createElement('div');
+
+      if(t === 'mort'){
+        const modeBoth = (p.mode !== 'int_only') ? 'selected' : '';
+        const modeInt = (p.mode === 'int_only') ? 'selected' : '';
+        container.innerHTML = `<div class="item-edit mort-row active">
+  <div style="font-size:11.5px; color:rgba(235,244,255,.9); margin-bottom:12px; line-height:1.45; background:rgba(0,0,0,0.25); padding:10px; border-radius:8px; border: 1px solid rgba(255,255,255,0.08);">
+    <b>ההוספה כאן מאפשרת יצירת פעולות לתקציב:</b>
+    <ul style="margin-top:6px; margin-bottom:0; padding-right:18px;">
+      <li style="margin-bottom:4px;">אופציה א': הקרן תירשם <b>כהכנסה</b>, והריבית תירשם <b>כהוצאה</b>.<br>אופציה ב': נרשם רק ריבית כהוצאה. הקרן לא נרשמת, כדי לא ליצור כפילות עם הכנסה משכירות.</li>
+      <li style="margin-bottom:4px;">אם רק חלקים מהמשכנתא נלקחו למטרת/בעקבות השקעה יש למלא % ההלוואה לחישוב.</li>
+      <li>חשוב למלא את יתרת ההלוואה + הריבית שנצברה מתחילת החודש. [ניתן לצפייה באתר הבנק, או אצל הבנקאי].</li>
+    </ul>
+  </div>
+  <div class="mort-row-line" style="grid-template-columns: 1.5fr 2fr; margin-bottom:6px;">
+    <div><label>תיאור/שם</label><input class="input v-name" value="${p.name ?? ''}" placeholder="למשל: משכנתא לאומי"></div>
+    <div><label>יתרת הלוואה</label><input class="input v-p" type="number" value="${p.p ?? ''}"></div>
+  </div>
+  <div class="mort-row-line" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom:6px;">
+    <div><label>ריבית %</label><input class="input v-r" type="number" step="0.001" value="${p.r ?? ''}"></div>
+    <div><label>חודשים לסיום</label><input class="input v-n" type="number" value="${p.n ?? ''}"></div>
+    <div><label>יום בחודש</label><input class="input v-d" type="number" value="${p.d ?? ''}"></div>
+  </div>
+  <div class="mort-row-line" style="grid-template-columns: 1fr 1.5fr auto auto;">
+    <div><label>% הלוואה</label><input class="input v-share" type="number" min="1" max="100" value="${p.share ?? 100}"></div>
+    <div><label>רישום בתקציב</label>
+      <select class="input v-mode">
+        <option value="both" ${modeBoth}>קרן (הכנסה) + ריבית (הוצאה)</option>
+        <option value="int_only" ${modeInt}>ריבית בלבד (הוצאה)</option>
+      </select>
+    </div>
+    <button class="btn" title="שמור" onclick="saveNewFixed('${t}',this)">💾</button>
+    <button class="btn danger" title="בטל" onclick="cancelNewFixed('${t}')">✖</button>
+  </div>
+</div>`;
+      } else {
+        container.innerHTML = `
+          <div class="item-edit fixed-row active">
+            <div><label>תיאור</label><input class="input v-desc" value="${p.desc ?? ''}"></div>
+            <div><label>סכום</label><input class="input v-amt" type="number" value="${p.amt ?? ''}"></div>
+            <div><label>יום בחודש</label><input class="input v-day" type="number" value="${p.day ?? ''}"></div>
+            <button class="btn" title="שמור" onclick="saveNewFixed('${t}',this)">💾</button>
+            <button class="btn danger" title="בטל" onclick="cancelNewFixed('${t}')">✖</button>
+          </div>
+        `;
+      }
+      div.appendChild(container);
+    }
+  });
+}
+
+window.saveFixed = (type, idx, btn) => {
+  const row = btn.closest('.item-edit');
+  if(!row) return;
+
+  if(type === 'mort'){
+    const name = (row.querySelector('.v-name')?.value || '').trim();
+    let p = parseFloat(row.querySelector('.v-p')?.value || '0') || 0;
+    let n = parseInt(row.querySelector('.v-n')?.value || '0', 10) || 0;
+    let r = parseFloat(row.querySelector('.v-r')?.value || '0') || 0;
+    let d = parseInt(row.querySelector('.v-d')?.value || '1', 10);
+    const mode = row.querySelector('.v-mode')?.value || 'both';
+    let share = parseFloat(row.querySelector('.v-share')?.value || '100') || 100;
+
+    if(!d || d < 1) d = 1; if(d > 31) d = 31;
+    if(share < 1) share = 1; if(share > 100) share = 100;
+    if(p < 0) p = 0;
+    if(n < 0) n = 0;
+    if(r < 0) r = 0;
+
+    if(share < 1) share = 1; if(share > 100) share = 100;
+    if(p < 0) p = 0;
+    if(n < 0) n = 0;
+    if(r < 0) r = 0;
+
+    fixedSettings[type][idx] = {name, p, n, r, d, mode, share};
+  } else {
+    const desc = (row.querySelector('.v-desc')?.value || '').trim();
+    const amt = parseFloat(row.querySelector('.v-amt')?.value || '0') || 0;
+    let day = parseInt(row.querySelector('.v-day')?.value || '1', 10);
+    if(!day || day < 1) day = 1; if(day > 31) day = 31;
+
+    fixedSettings[type][idx] = {desc, amt, day};
+  }
+
+  localStorage.setItem('vLux_fixed_v7', JSON.stringify(fixedSettings));
+  renderFixedList();
+  if(typeof showToast === "function") showToast("נשמר");
+};
+
+window.saveNewFixed = (type, btn) => {
+  const row = btn.closest('.item-edit');
+  if(!row) return;
+
+  if(!fixedSettings[type]) fixedSettings[type] = [];
+
+  if(type === 'mort'){
+    const name = (row.querySelector('.v-name')?.value || '').trim();
+    const p = parseFloat(row.querySelector('.v-p')?.value || '0') || 0;
+    const n = parseInt(row.querySelector('.v-n')?.value || '0', 10) || 0;
+    const r = parseFloat(row.querySelector('.v-r')?.value || '0') || 0;
+    let d = parseInt(row.querySelector('.v-d')?.value || '1', 10);
+    const mode = row.querySelector('.v-mode')?.value || 'both';
+    const share = parseFloat(row.querySelector('.v-share')?.value || '100') || 100;
+    if(!d || d < 1) d = 1; if(d > 31) d = 31;
+
+    fixedSettings[type].push({name, p, n, r, d, mode, share});
+  } else {
+    const desc = (row.querySelector('.v-desc')?.value || '').trim();
+    const amt = parseFloat(row.querySelector('.v-amt')?.value || '0') || 0;
+    let day = parseInt(row.querySelector('.v-day')?.value || '1', 10);
+    if(!day || day < 1) day = 1; if(day > 31) day = 31;
+
+    fixedSettings[type].push({desc, amt, day});
+  }
+
+  pendingFixed[type] = null;
+  localStorage.setItem('vLux_fixed_v7', JSON.stringify(fixedSettings));
+  renderFixedList();
+  if(typeof showToast === "function") showToast("נוסף ונשמר");
+};
+
+window.cancelNewFixed = (type) => {
+  pendingFixed[type] = null;
+  renderFixedList();
+};
+
+window.removeFixed = (type, idx) => {
+  fixedSettings[type].splice(idx,1);
+  localStorage.setItem('vLux_fixed_v7', JSON.stringify(fixedSettings));
+  renderFixedList();
+};
+
+onClick('addInc', ()=>addFixed('inc'));
+onClick('addExp', ()=>addFixed('exp'));
+onClick('addCat1', ()=>addFixed('cat1'));
+onClick('addCat2', ()=>addFixed('cat2'));
+onClick('addMort', ()=>addFixed('mort'));
+function addFixed(t){
+  // create draft row; not added until user clicks 💾
+  pendingFixed[t] = (t==='mort') ? {name:'', p:'', n:'', r:'', d:'', mode:'both', share:100} : {desc:'', amt:'', day:''};
+  renderFixedList();
+}
+/* SCHEDULED & BACKUP TIMERS */
+
+/* ===== משכנתא במחזורית (לפי קוד משכנתא) ===== */
+function _clampDayToMonth(y, m, d){
+  // מחזיר תאריך תקין גם לחודשים קצרים (למשל 31 בפברואר => 28/29)
+  const dt = new Date(y, m, d);
+  if(dt.getMonth() !== m){
+    // גלש לחודש הבא => נחזיר את היום האחרון של החודש המקורי
+    return new Date(y, m+1, 0);
+  }
+  return dt;
+}
+function calcMortgageParts(m, y, mon){
+  // mon: 0..11
+  const P = parseFloat(m.p ?? m.P ?? 0) || 0;
+  const N = parseInt(m.n ?? m.N ?? 0, 10) || 0;
+  const R_annual = (parseFloat(m.r ?? m.R ?? 0) || 0) / 100;
+  const dayOfMonth = parseInt(m.d ?? m.day ?? 1, 10) || 1;
+
+  if(!P || !N || !R_annual || !dayOfMonth){
+    return null;
+  }
+
+  const payDate = _clampDayToMonth(y, mon, dayOfMonth);
+  const prevDate = _clampDayToMonth(y, mon-1, dayOfMonth);
+
+  const diffTime = Math.abs(payDate - prevDate);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  const dailyRate = R_annual / 365;
+  const avgDaysInMonth = 365 / 12;
+  const rEffMonthly = Math.pow(1 + dailyRate, avgDaysInMonth) - 1;
+
+  const monthlyPayment = P * (rEffMonthly * Math.pow(1 + rEffMonthly, N)) / (Math.pow(1 + rEffMonthly, N) - 1);
+  const actualInterest = P * (Math.pow(1 + dailyRate, diffDays) - 1);
+  let principalPart = monthlyPayment - actualInterest;
+
+  // הגנות קצה
+  if(principalPart < 0) principalPart = 0;
+  if(principalPart > P) principalPart = P;
+
+  return {
+    payDate,
+    diffDays,
+    monthlyPayment,
+    actualInterest,
+    principalPart
+  };
+}
+
+function checkAllScheduled(){
+  const now = new Date(); const mid = `${now.getMonth()+1}-${now.getFullYear()}`; let queue = [];
+  ['inc','exp','cat1','cat2'].forEach(t=>{ (fixedSettings[t]||[]).forEach((item,i)=>{ const lid = `${t}-${i}-${mid}`; if(now.getDate() >= item.day && !confirmedLogs.includes(lid)){ queue.push({t, item, lid}); }}); });
+  // משכנתא (קרן+ריבית) – מתוזמן לפי יום בחודש
+  (fixedSettings.mort || []).forEach((mItem,i)=>{
+    const day = parseInt(mItem.d ?? mItem.day ?? 1, 10) || 1;
+    const lid = `mort-${i}-${mid}`;
+    if(now.getDate() >= day && !confirmedLogs.includes(lid)){
+      queue.push({t:'mort', item:mItem, idx:i, lid});
+    }
+  });
+  if(queue.length) processQueue(queue, 0);
+}
+function processQueue(q, i){
+  if(i >= q.length) { save(); updateUI(); return; }
+
+  const curr = q[i];
+
+  // ===== משכנתא (יוצר 2 פעולות: קרן כהכנסה + ריבית כהוצאה) =====
+  if(curr.t === 'mort'){
+    const now = new Date();
+    const y = now.getFullYear();
+    const mon = now.getMonth();
+    const parts = calcMortgageParts(curr.item, y, mon);
+
+    // אם חסרים נתונים – פשוט לדלג (כדי שלא יתקע)
+    if(!parts){
+      confirmedLogs.push(curr.lid);
+      localStorage.setItem('vLux_confirmed', JSON.stringify(confirmedLogs));
+      processQueue(q, i+1);
+      return;
+    }
+
+    const fmt = (v)=> (v||0).toLocaleString('he-IL', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+    const name = (curr.item.name || curr.item.desc || "משכנתא").trim();
+    const mode = curr.item.mode || 'both';
+    
+    // שליפת חלק יחסי
+    const share = curr.item.share !== undefined ? curr.item.share : 100;
+    const shareMult = share / 100;
+    
+    // הנתונים שיכנסו לתקציב שלך לפי החלק היחסי
+    const myPrincipal = parts.principalPart * shareMult;
+    const myInterest = parts.actualInterest * shareMult;
+    const myPayment = parts.monthlyPayment * shareMult;
+
+    let shareText = share < 100 ? `<br><span style="color:var(--accent); font-size:12px;">מחושב לפי חלקך: ${share}%</span>` : "";
+
+    $('notifText').innerHTML =
+      `פירעון משכנתא החודש:<br><b>${name}</b>${shareText}<br>` +
+      `קרן: <b>${fmt(myPrincipal)}₪</b> | ריבית: <b>${fmt(myInterest)}₪</b><br>` +
+      `<span style="opacity:.85;">סה"כ תשלום שלך: ${fmt(myPayment)}₪ (סבב ${parts.diffDays} ימים)</span>`;
+
+    $('notifToast').style.display = 'block';
+    $('overlay').style.display = 'block';
+
+    // למנוע הצטברות מאזינים
+    $('notifOk').onclick = null; $('notifSkip').onclick = null;
+
+    onClick('notifOk', ()=>{
+      markBackupDirty();
+
+      // פתרון בעיית התאריך שקופץ יום אחורה (שימוש בזמן מקומי ולא ב-UTC)
+      const dLocal = parts.payDate;
+      const iso = `${dLocal.getFullYear()}-${String(dLocal.getMonth()+1).padStart(2,'0')}-${String(dLocal.getDate()).padStart(2,'0')}`;
+      const disp = isoToDisplay(iso);
+
+      // הכנסה (קרן - לפי החלק היחסי)
+      if(mode !== 'int_only'){
+        insertSorted(data1, {
+          id: Date.now(),
+          date: iso,
+          displayDate: disp,
+          desc: `קרן משכנתא - ${name}`,
+          amount: Number(myPrincipal.toFixed(2)),
+          type: 'income'
+        });
+      }
+
+      // הוצאה (ריבית - לפי החלק היחסי)
+      insertSorted(data1, {
+        id: Date.now()+1,
+        date: iso,
+        displayDate: disp,
+        desc: `ריבית משכנתא - ${name}`,
+        amount: Number(myInterest.toFixed(2)),
+        type: 'expense'
+      });
+
+      // עדכון יתרת הקרן המלאה של המשכנתא (כדי שימשיך להסתנכרן בצורה מדויקת מול הבנק)
+      const pNow = parseFloat(curr.item.p ?? curr.item.P ?? 0) || 0;
+      const nNow = parseInt(curr.item.n ?? curr.item.N ?? 0, 10) || 0;
+      const newP = Math.max(0, pNow - parts.principalPart); // פה מורידים את הפירעון המלא
+      const newN = Math.max(0, nNow - 1);
+      curr.item.p = Number(newP.toFixed(2));
+      curr.item.n = newN;
+
+      // שמירה של המשכנתא חזרה ל-fixedSettings
+      if(typeof curr.idx === 'number' && fixedSettings.mort && fixedSettings.mort[curr.idx]){
+        fixedSettings.mort[curr.idx].p = curr.item.p;
+        fixedSettings.mort[curr.idx].n = curr.item.n;
+        localStorage.setItem('vLux_fixed_v7', JSON.stringify(fixedSettings));
+      }
+
+      confirmedLogs.push(curr.lid);
+      localStorage.setItem('vLux_confirmed', JSON.stringify(confirmedLogs));
+
+      $('notifToast').style.display='none';
+      $('overlay').style.display='none';
+      processQueue(q, i+1);
+    });
+
+    onClick('notifSkip', ()=>{
+      confirmedLogs.push(curr.lid);
+      localStorage.setItem('vLux_confirmed', JSON.stringify(confirmedLogs));
+      $('notifToast').style.display='none';
+      $('overlay').style.display='none';
+      processQueue(q, i+1);
+    });
+
+    return;
+  }
+
+  // ===== רגיל (הכנסה/הוצאה/מעשר/חומש) =====
+  const typeName = curr.t==='inc'?'הכנסה':(curr.t==='exp'?'הוצאה':(curr.t==='cat2'?'חומש':'מעשר'));
+  $('notifText').innerHTML = `האם להוסיף ${typeName} קבועה?<br><b>${curr.item.desc}</b> (${curr.item.amt}₪)`;
+  $('notifToast').style.display = 'block';
+  $('overlay').style.display = 'block';
+
+  // למנוע הצטברות מאזינים
+  $('notifOk').onclick = null; $('notifSkip').onclick = null;
+
+  // NOTE: keeping your original behavior (won't refactor)
+  onClick('notifOk', ()=>{
+    markBackupDirty();
+
+    const arr = (curr.t==='inc'||curr.t==='exp') ? data1 : (curr.t==='cat2' ? data3 : data2);
+    const type = (curr.t==='inc')?'income':(curr.t==='exp'?'expense':curr.t);
+    const now = new Date();
+    insertSorted(arr, { id: Date.now(), date: now.toISOString().split('T')[0], displayDate: `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`, desc: curr.item.desc, amount: curr.item.amt, type: type });
+    confirmedLogs.push(curr.lid);
+    localStorage.setItem('vLux_confirmed', JSON.stringify(confirmedLogs));
+    $('notifToast').style.display='none';
+    $('overlay').style.display='none';
+    processQueue(q, i+1);
+  });
+  onClick('notifSkip', ()=>{
+    $('notifToast').style.display='none';
+    $('overlay').style.display='none';
+    processQueue(q, i+1);
+  });
+}
+
+function checkBackupTimer(){
+  let lastB = localStorage.getItem('vLux_lastBackupAt');
+  // אם לא תועד גיבוי מעולם, ננסה לבדוק לפי זמן ההזנה הראשונה
+  if(!lastB && config.firstEntry) lastB = config.firstEntry;
+  
+  if(lastB){
+    const days = (new Date() - new Date(lastB)) / (1000 * 60 * 60 * 24);
+    // הוגדר במיוחד ל-7 ימים מהגיבוי האחרון (ידני או אוטומטי)
+    if(days >= 7){
+      $('backupToast').style.display = 'block'; 
+      $('overlay').style.display = 'block';
+    }
+  }
+}
+onClick('backupClose', ()=>{ $('backupToast').style.display='none'; $('overlay').style.display='none'; });
+onClick('backupNow', ()=>{
+  $('btnBackup').click();
+  // כפתור הגיבוי מעדכן אוטומטית את התאריך במסד, אז אנחנו רק סוגרים את חלונית ההתראה
+  $('backupClose').click();
+});
+
+
+/* FILTER TOGGLE */
+function toggleFilter(btn) {
+  const p = $('filterPopover');
+  if (!p) return;
+
+  if (p.style.display === 'flex') {
+    p.style.display = 'none';
+  } else {
+    // show first so offsetWidth is measurable
+    p.style.display = 'flex';
+
+    // disable centering transform when positioning by pixel-left
+    p.style.transform = 'none';
+
+    const rect = btn.getBoundingClientRect();
+
+    // align right edge of popover to right edge of button
+    let leftPos = rect.right - p.offsetWidth;
+    const margin = 10;
+
+    // clamp to viewport (left wall)
+    if (leftPos < margin) {
+      leftPos = margin;
+    }
+
+    // clamp to viewport (right wall)
+    if (leftPos + p.offsetWidth > window.innerWidth - margin) {
+      leftPos = window.innerWidth - p.offsetWidth - margin;
+    }
+
+    p.style.top = (rect.bottom + 8) + 'px';
+    p.style.left = leftPos + 'px';
+  }
+}
+
+onClick('filterToggleBtn', (e)=>{ 
+  e.stopPropagation();
+  toggleFilter(e.currentTarget || e.target);
+});
+
+
+/* ===== Date Picker (new layout + positioning) ===== */
+let dpViewM, dpViewY;
+
+function openDP(targetId, btn){
+  const now = new Date();
+  dpViewM = now.getMonth();
+  dpViewY = now.getFullYear();
+  renderDP(targetId, btn);
+}
+
+function renderDP(targetId, btn){
+  const existing = document.querySelector('.date-popup');
+  if(existing) existing.remove();
+
+  const dp = document.createElement('div');
+  dp.className = 'date-popup';
+
+  // position near the button (clamped to viewport)
+  const rect = btn.getBoundingClientRect();
+  document.body.appendChild(dp); // attach early to measure
+
+  // build content - NEW LUXURY LAYOUT
+  const title = `${months[dpViewM]} ${dpViewY}`;
+  let html = `<div class="dp-header">
+      <button class="dp-nav" type="button" data-dp-nav="-1">›</button>
+      <span class="dp-title">${title}</span>
+      <button class="dp-nav" type="button" data-dp-nav="1">‹</button>
+    </div>
+    <div class="dp-grid">`;
+
+  // Headers (Days)
+  const dayNames = ['א','ב','ג','ד','ה','ו','ש'];
+  // (Optional: add day headers if desired, currently sticking to clean grid per original request but cleaner)
+
+  const daysInMonth = new Date(dpViewY, dpViewM + 1, 0).getDate();
+  const today = new Date();
+  for(let d=1; d<=daysInMonth; d++){
+    const isToday = (d===today.getDate() && dpViewM===today.getMonth() && dpViewY===today.getFullYear());
+    html += `<div class="dp-day ${isToday?'dp-today':''}" data-dp-day="${d}">${d}</div>`;
+  }
+  html += `</div>`;
+  dp.innerHTML = html;
+
+  // measure and place
+  const w = dp.offsetWidth;
+  const h = dp.offsetHeight;
+  const pad = 10;
+
+  let left = rect.left + (rect.width/2) - (w/2);
+  left = Math.max(pad, Math.min(left, window.innerWidth - w - pad));
+
+  let top = rect.bottom + 8;
+  if(top + h + pad > window.innerHeight){
+    top = rect.top - h - 8;
+  }
+  top = Math.max(pad, Math.min(top, window.innerHeight - h - pad));
+
+  dp.style.left = left + 'px';
+  dp.style.top  = top + 'px';
+
+  // handlers
+  dp.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    const nav = ev.target.closest('[data-dp-nav]');
+    // const close = ev.target.closest('[data-dp-close]'); // Removed X button for cleaner look, clicking outside closes
+    const dayEl = ev.target.closest('[data-dp-day]');
+
+    if(nav){
+      const diff = parseInt(nav.getAttribute('data-dp-nav'),10);
+      dpViewM += diff;
+      if(dpViewM > 11){ dpViewM = 0; dpViewY++; }
+      if(dpViewM < 0){ dpViewM = 11; dpViewY--; }
+      renderDP(targetId, btn);
+      return;
+    }
+    if(dayEl){
+      const d = parseInt(dayEl.getAttribute('data-dp-day'),10);
+      const m = dpViewM + 1;
+      $(targetId).value = `${dpViewY}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      dp.remove();
+      updateUI();
+      return;
+    }
+  });
+
+  // close on outside click
+  setTimeout(()=>{
+    const outside = (ev)=>{
+      if(!ev.target.closest('.date-popup') && ev.target !== btn){
+        const cur = document.querySelector('.date-popup');
+        if(cur) cur.remove();
+        document.removeEventListener('click', outside, true);
+      }
+    };
+    document.addEventListener('click', outside, true);
+  }, 0);
+}
+
+// הפעלת לוח שנה מהכפתורים בתוך הסינון
+document.querySelectorAll('.cal-btn-inner').forEach(btn => {
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    openDP(btn.getAttribute('data-target'), btn);
+  };
+});
+
+// סגירת חלונית הסינון בלחיצה בחוץ
+document.addEventListener('click', (e) => {
+  const p = $('filterPopover');
+  if (p && !p.contains(e.target) && e.target.id !== 'filterToggleBtn') {
+    p.style.display = 'none';
+  }
+});
+
+// כל השדה לחיץ (גם התיבה) ופותח את לוח השנה
+['searchStartMaster','searchEndMaster'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const btn = document.querySelector(`.calendar-btn[data-target="${id}"]`);
+    openDP(id, btn || el);
+  });
+});
+
+
+// פונקציית עזר להמרת תאריך ISO לתצוגה רגילה
+function isoToDisplay(iso){
+  if(!iso) return "";
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+
+
+
+
+// פונקציית עזר להמרת תצוגה dd/mm/yyyy (או d/m/yyyy) לתאריך ISO yyyy-mm-dd
+function displayToIso(display){
+  if(!display) return "";
+  const s = String(display).trim();
+
+  // Accept ISO directly
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  const parts = s.split(/[\.\/\-]/).map(p=>p.trim()).filter(Boolean);
+  if(parts.length !== 3) return "";
+
+  let d, m, y;
+
+  // If user typed yyyy/mm/dd
+  if(parts[0].length === 4){
+    y = parts[0]; m = parts[1]; d = parts[2];
+  }else{
+    d = parts[0]; m = parts[1]; y = parts[2];
+  }
+
+  const ddNum = parseInt(d, 10);
+  const mmNum = parseInt(m, 10);
+  let yyNum  = parseInt(y, 10);
+
+  if(Number.isNaN(ddNum) || Number.isNaN(mmNum) || Number.isNaN(yyNum)) return "";
+
+  // Support 2-digit years (e.g., 26 => 2026)
+  if(String(y).trim().length === 2){
+    yyNum = (yyNum <= 79) ? (2000 + yyNum) : (1900 + yyNum);
+  }
+
+  const dd = String(ddNum).padStart(2,'0');
+  const mm = String(mmNum).padStart(2,'0');
+  const yy = String(yyNum).padStart(4,'0');
+
+  if(!/^\d{2}$/.test(dd) || !/^\d{2}$/.test(mm) || !/^\d{4}$/.test(yy)) return "";
+
+  // Validity check using LOCAL time to avoid timezone shifts
+  const dt = new Date(yyNum, mmNum - 1, ddNum);
+  if(dt.getFullYear() !== yyNum || dt.getMonth() !== (mmNum - 1) || dt.getDate() !== ddNum) return "";
+
+  return `${yy}-${mm}-${dd}`;
+}
+function setDefaultDates(){
+    // אם כבר הוגדר למעלה, זה רק ליתר ביטחון
+    const _todayIso = new Date().toISOString().split('T')[0];
+    ['date1','date2'].forEach(_id=>{
+        const _el = $( _id );
+        if(_el && !_el.value) _el.value = _todayIso;
+    });
+}
+</script>
+
+  <div id="toastMsg" style="position:fixed; bottom:-50px; left:50%; transform:translateX(-50%); background:rgba(52,211,153,0.95); color:#000; padding:10px 24px; border-radius:30px; font-weight:bold; font-size:14px; box-shadow:0 10px 30px rgba(0,0,0,0.5); transition:bottom 0.3s ease, opacity 0.3s ease; opacity:0; z-index:99999; pointer-events:none;">נשמר!</div>
+
+</body>
+</html>
