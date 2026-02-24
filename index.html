@@ -1829,21 +1829,15 @@ async function cloudSave(state){
 }
 
 async function startAppAfterAuth(){
-  // שלב 1: קודם כל פותחים את הדלת! מראים את האפליקציה מיד
-  const lock = $('lock');
-  const app = $('app');
-  const sysbar = $('sysbar');
-  const topbar = $('topbar');
-
-  if(lock) lock.classList.add('hidden');
-  if(app) app.classList.remove('hidden');
-  if(sysbar) sysbar.classList.remove('hidden');
-  if(topbar) topbar.classList.remove('hidden');
+  // פתיחת הדלת מיד - מסתירים את הענן ומראים את האפליקציה
+  $('lock').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('sysbar').classList.remove('hidden');
+  $('topbar').classList.remove('hidden');
 
   initMasterFilters();
   setupEnterKeys();
 
-  // שלב 2: עכשיו ננסה להביא נתונים מהענן ברוגע
   try {
     const cloud = await cloudLoad();
     if(cloud){
@@ -1855,14 +1849,13 @@ async function startAppAfterAuth(){
       config = cloud.config || config;
       ensureSorted(data1); ensureSorted(data2); ensureSorted(data3);
     }
-  } catch(e) {
-    console.log("עובד כרגע על זיכרון מקומי, הענן יסתנכרן בהמשך");
-  }
+  } catch(e) { console.error("Cloud error:", e); }
 
   updateUI();
   checkAllScheduled();
   checkBackupTimer();
 }
+
 
 
 
@@ -1884,25 +1877,7 @@ async function resetEmailPass(){
 }
 
 /* במקום סיסמה מקומית - כניסה עם Email/Password */
-async function checkPasswordSafe(){
-  fbInitOnce();
-  const email = ( $('emailInput')?.value || '' ).trim();
-  const pass  = ( $('passInput')?.value || '' ).trim();
-  if(!email || !pass){
-    $('loginHint') && ($('loginHint').textContent = "נא למלא דוא״ל וסיסמה.");
-    return;
-  }
-  $('loginHint') && ($('loginHint').textContent = "מתחבר...");
-  try{
-    await firebase.auth().signInWithEmailAndPassword(email, pass);
-    $('loginHint') && ($('loginHint').textContent = "נכנסת ✅");
-    await startAppAfterAuth();
-  }catch(e){
-    console.error(e);
-    $('loginHint') && ($('loginHint').textContent = "שגיאת כניסה: " + (e?.message || e));
-  }
-}
-
+async 
 
 
 
