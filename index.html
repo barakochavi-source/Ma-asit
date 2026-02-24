@@ -1829,16 +1829,21 @@ async function cloudSave(state){
 }
 
 async function startAppAfterAuth(){
-  // קודם כל - נראה את האפליקציה כדי שלא יהיה "חלון מחוק"
-  document.getElementById('lock').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  document.getElementById('sysbar').classList.remove('hidden');
-  document.getElementById('topbar').classList.remove('hidden');
+  // שלב 1: קודם כל פותחים את הדלת! מראים את האפליקציה מיד
+  const lock = $('lock');
+  const app = $('app');
+  const sysbar = $('sysbar');
+  const topbar = $('topbar');
+
+  if(lock) lock.classList.add('hidden');
+  if(app) app.classList.remove('hidden');
+  if(sysbar) sysbar.classList.remove('hidden');
+  if(topbar) topbar.classList.remove('hidden');
 
   initMasterFilters();
   setupEnterKeys();
 
-  // עכשיו ננסה לטעון מהענן בזהירות
+  // שלב 2: עכשיו ננסה להביא נתונים מהענן ברוגע
   try {
     const cloud = await cloudLoad();
     if(cloud){
@@ -1851,11 +1856,14 @@ async function startAppAfterAuth(){
       ensureSorted(data1); ensureSorted(data2); ensureSorted(data3);
     }
   } catch(e) {
-    console.log("הענן עדיין לא מוכן, עובד על זיכרון מקומי");
+    console.log("עובד כרגע על זיכרון מקומי, הענן יסתנכרן בהמשך");
   }
 
   updateUI();
+  checkAllScheduled();
+  checkBackupTimer();
 }
+
 
 
 async function resetEmailPass(){
