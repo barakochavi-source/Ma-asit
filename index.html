@@ -1876,11 +1876,42 @@ async function resetEmailPass(){
   }
 }
 
+/* פונקציית הכניסה האמיתית לענן */
+async function checkPasswordSafe() {
+  fbInitOnce();
+  const email = ($('emailInput').value || '').trim();
+  const pass = ($('passInput').value || '').trim();
+  const hint = $('loginHint');
+
+  if (!email || !pass) {
+    if (hint) hint.textContent = "נא להזין מייל וסיסמה.";
+    return;
+  }
+
+  if (hint) hint.textContent = "מתחבר לענן...";
+
+  try {
+    await firebase.auth().signInWithEmailAndPassword(email, pass);
+    // ברגע שהחיבור מצליח, ה-Listener למטה יפתח את האפליקציה
+  } catch (e) {
+    if (hint) hint.textContent = "שגיאה: " + e.message;
+  }
+}
+
+/* המאזין של גוגל - בודק אם אתה מחובר */
+firebase.auth().onAuthStateChanged((user) => {
+  if (user) {
+    // אם המשתמש מחובר - מריצים את פתיחת האפליקציה
+    startAppAfterAuth();
+  } else {
+    // אם לא מחובר - מוודאים שמסך הכניסה מוצג
+    $('lock').classList.remove('hidden');
+    $('app').classList.add('hidden');
+  }
+});
+
+
 /* במקום סיסמה מקומית - כניסה עם Email/Password */
-async 
-
-
-
 /* ===== ORDERING: show rows old→new + insert by date ===== */
 function _cmpByDateAsc(a,b){
   const ad = a?.date || '';
@@ -2029,29 +2060,6 @@ function loadMore2(){ limit2+=100; updateUI(); }
 function loadMore3(){ limit3+=100; updateUI(); }
 
 /* LOGIN & INIT */
-function checkPasswordSafe(){
-  if(!savedPass){
-    showSetup();
-    return;
-  }
-  const v = (($('passInput').value || '').trim());
-  if(v === savedPass){
-    $('lock').classList.add('hidden');
-    $('app').classList.remove('hidden');
-    $('sysbar').classList.remove('hidden');
-    $('topbar').classList.remove('hidden');
-    initMasterFilters();
-    setupEnterKeys();
-    updateUI();
-    checkAllScheduled();
-    checkBackupTimer();
-  } else {
-    const h = $('loginHint');
-    if(h) h.textContent = "סיסמה שגויה, נסה שוב.";
-    $('passInput').focus();
-    $('passInput').select?.();
-  }
-}
 
 $('passInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') checkPasswordSafe(); });
 
