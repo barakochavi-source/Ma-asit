@@ -1829,15 +1829,16 @@ async function cloudSave(state){
 }
 
 async function startAppAfterAuth(){
-  // פתיחת הדלת מיד - מסתירים את הענן ומראים את האפליקציה
-  $('lock').classList.add('hidden');
-  $('app').classList.remove('hidden');
-  $('sysbar').classList.remove('hidden');
-  $('topbar').classList.remove('hidden');
+  // 1. קודם כל - מעלימים את מסך הענן ומראים את האפליקציה
+  if($('lock')) $('lock').classList.add('hidden');
+  if($('app')) $('app').classList.remove('hidden');
+  if($('sysbar')) $('sysbar').classList.remove('hidden');
+  if($('topbar')) $('topbar').classList.remove('hidden');
 
   initMasterFilters();
   setupEnterKeys();
 
+  // 2. עכשיו מנסים לטעון מהענן בזהירות
   try {
     const cloud = await cloudLoad();
     if(cloud){
@@ -1855,6 +1856,7 @@ async function startAppAfterAuth(){
   checkAllScheduled();
   checkBackupTimer();
 }
+
 
 
 
